@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,22 +10,22 @@
   <header>
     <div class="brand">Browser Agent</div>
     <div class="header-actions">
-      <button id="history-toggle" class="icon-btn" title="Geçmiş sohbetler">🕘</button>
-      <button id="new-chat" class="icon-btn" title="Yeni sohbet">✎</button>
-      <button id="settings-toggle" class="icon-btn" title="Ayarlar">⚙</button>
+      <button id="history-toggle" class="icon-btn" data-i18n-title="titleHistory">🕘</button>
+      <button id="new-chat" class="icon-btn" data-i18n-title="titleNewChat">✎</button>
+      <button id="settings-toggle" class="icon-btn" data-i18n-title="titleSettings">⚙</button>
     </div>
   </header>
 
   <!-- History drawer -->
   <section id="history" class="drawer" hidden>
-    <div class="drawer-title">Geçmiş sohbetler</div>
+    <div class="drawer-title" data-i18n="historyTitle">Past chats</div>
     <ul id="history-list" class="history-list"></ul>
-    <div id="history-empty" class="muted" style="text-align:center;padding:10px;">Henüz sohbet yok.</div>
+    <div id="history-empty" class="muted" style="text-align:center;padding:10px;" data-i18n="historyEmpty">No chats yet.</div>
   </section>
 
   <!-- Settings drawer (hidden by default) -->
   <section id="settings" class="drawer" hidden>
-    <label>Yapay zeka sağlayıcı
+    <label><span data-i18n="providerLabel">AI provider</span>
       <select id="provider">
         <option value="anthropic">Anthropic (Claude)</option>
         <option value="openai">OpenAI (GPT)</option>
@@ -33,40 +33,47 @@
         <option value="openrouter">OpenRouter</option>
         <option value="deepseek">DeepSeek</option>
         <option value="groq">Groq</option>
-        <option value="ollama">Ollama (yerel)</option>
-        <option value="custom">Özel (OpenAI uyumlu)</option>
+        <option value="ollama">Ollama</option>
+        <option value="custom">Custom (OpenAI-compatible)</option>
       </select>
     </label>
-    <label>API anahtarı <span id="key-hint" class="muted"></span>
-      <input id="api-key" type="password" placeholder="anahtar">
+    <label><span data-i18n="apiKeyLabel">API key</span> <span id="key-hint" class="muted"></span>
+      <input id="api-key" type="password" data-i18n-ph="apiKeyPh" placeholder="key">
     </label>
-    <label id="baseurl-label" hidden>Base URL
+    <label id="baseurl-label" hidden><span data-i18n="baseUrlLabel">Base URL</span>
       <input id="base-url" type="text" placeholder="http://localhost:11434/v1">
     </label>
-    <label>Model (adım)
+    <label><span data-i18n="modelLabel">Model (step)</span>
       <input id="cheap-model" type="text">
     </label>
     <input id="strong-model" type="hidden">
 
+    <label><span data-i18n="langLabel">App language</span>
+      <select id="lang">
+        <option value="tr">Türkçe</option>
+        <option value="en">English</option>
+      </select>
+    </label>
+
     <details class="advanced">
-      <summary>Gelişmiş</summary>
-      <label class="row-line">İzinli alan adları <span class="muted">(boş = tüm siteler)</span>
-        <input id="domains" type="text" placeholder="boş = her site">
+      <summary data-i18n="advanced">Advanced</summary>
+      <label class="row-line"><span data-i18n="domainsLabel">Allowed domains</span> <span class="muted" data-i18n="domainsHint">(empty = all sites)</span>
+        <input id="domains" type="text" data-i18n-ph="domainsPh" placeholder="empty = any site">
       </label>
-      <label class="row-line">Maks. adım <span class="muted">(0 = sınırsız)</span>
+      <label class="row-line"><span data-i18n="maxStepsLabel">Max steps</span> <span class="muted" data-i18n="maxStepsHint">(0 = unlimited)</span>
         <input id="max-steps" type="number" value="0" min="0">
       </label>
-      <label class="checkline"><input id="validate" type="checkbox"> Her adımı doğrula</label>
+      <label class="checkline"><input id="validate" type="checkbox"> <span data-i18n="validateLabel">Validate each step</span></label>
     </details>
 
-    <button id="save-settings" class="primary">Kaydet</button>
+    <button id="save-settings" class="primary" data-i18n="save">Save</button>
   </section>
 
   <!-- Chat transcript -->
   <main id="chat">
     <div id="empty" class="empty">
-      <p>Bir görev yaz, tarayıcıda senin için yapayım.</p>
-      <p class="muted">Örn: "google'da hava durumu Ankara ara ve sonucu söyle"</p>
+      <p data-i18n="emptyLine1">Type a task and I'll do it in your browser.</p>
+      <p class="muted" data-i18n="emptyLine2">e.g. "search the weather in Ankara on Google and tell me"</p>
     </div>
   </main>
 
@@ -74,8 +81,8 @@
   <section id="approval" class="approval" hidden>
     <p id="approval-text"></p>
     <div class="row">
-      <button id="approve-yes" class="danger">Onayla</button>
-      <button id="approve-no" class="ghost">Reddet</button>
+      <button id="approve-yes" class="danger" data-i18n="approve">Approve</button>
+      <button id="approve-no" class="ghost" data-i18n="reject">Reject</button>
     </div>
   </section>
 
@@ -86,10 +93,10 @@
   <footer class="composer">
     <input id="file-input" type="file" multiple hidden
            accept=".txt,.csv,.json,.md,.tsv,.log,.xml,.html,.yml,.yaml">
-    <button id="attach" class="icon-btn" title="Dosya ekle">📎</button>
-    <textarea id="task" rows="1" placeholder="Görev yaz…"></textarea>
-    <button id="cancel" class="icon-btn" title="Durdur" hidden>■</button>
-    <button id="send" class="send-btn" title="Gönder">↑</button>
+    <button id="attach" class="icon-btn" data-i18n-title="titleAttach">📎</button>
+    <textarea id="task" rows="1" data-i18n-ph="taskPh" placeholder="Type a task…"></textarea>
+    <button id="cancel" class="icon-btn" data-i18n-title="titleCancel" hidden>■</button>
+    <button id="send" class="send-btn" data-i18n-title="titleSend">↑</button>
   </footer>
 
   <script src="sidepanel.js"></script>

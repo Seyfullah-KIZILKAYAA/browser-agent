@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Browser Agent",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "LLM'in tarayıcıyı insan gibi sürdüğü otonom ajan — gerçek, giriş yapılmış oturumunda.",
   "permissions": ["tabs", "activeTab", "storage", "sidePanel", "alarms", "debugger", "webNavigation"],
   "host_permissions": ["<all_urls>"],

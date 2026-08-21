@@ -5,6 +5,7 @@
  */
 import type { AttachedFile, BackgroundEvent, PanelCommand } from "../shared/protocol";
 import { PANEL_PORT } from "../shared/protocol";
+import { applyI18n, Lang, setLang, t } from "./i18n";
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 
@@ -65,13 +66,13 @@ function beginAgentTurn(): void {
 
   const result = document.createElement("div");
   result.className = "result running";
-  result.textContent = "Çalışıyor…";
+  result.textContent = t("running");
 
   const stepsDetails = document.createElement("details");
   stepsDetails.className = "steps";
   stepsDetails.hidden = true; // shown once the first step arrives
   const summary = document.createElement("summary");
-  summary.textContent = "Adımları göster";
+  summary.textContent = t("stepsToggle");
   const steps = document.createElement("ol");
   stepsDetails.appendChild(summary);
   stepsDetails.appendChild(steps);
@@ -115,7 +116,7 @@ function finishAgentTurn(text: string, kind: "ok" | "fail", meta?: string): void
   // Collapse the steps summary label to reflect it's done.
   const summary = activeTurn.steps.parentElement?.querySelector("summary");
   if (summary && activeTurn.steps.children.length) {
-    summary.textContent = `Adımları göster (${activeTurn.steps.children.length})`;
+    summary.textContent = `${t("stepsToggle")} (${activeTurn.steps.children.length})`;
   }
   activeTurn = null;
   scrollDown();
@@ -168,7 +169,20 @@ $("settings-toggle").addEventListener("click", () => {
   settingsSection.hidden = !settingsSection.hidden;
 });
 
-chrome.storage.local.get(["provider", "apiKey", "strongModel", "cheapModel", "baseUrl"], (s) => {
+// Language: apply immediately when changed, persist on save.
+const langSel = $<HTMLSelectElement>("lang");
+langSel.addEventListener("change", () => {
+  setLang(langSel.value as Lang);
+  applyI18n();
+});
+
+chrome.storage.local.get(["provider", "apiKey", "strongModel", "cheapModel", "baseUrl", "lang"], (s) => {
+  // Default to English; only switch if the user previously chose a language.
+  const lang = (s.lang as Lang) ?? "en";
+  setLang(lang);
+  langSel.value = lang;
+  applyI18n();
+
   const provider = s.provider ?? "anthropic";
   providerSel.value = provider;
   applyProviderInfo(provider, false);
@@ -187,7 +201,10 @@ $("save-settings").addEventListener("click", () => {
   const strongModel = strongInput.value.trim() || undefined;
   const cheapModel = cheapInput.value.trim() || undefined;
   const baseUrl = $<HTMLInputElement>("base-url").value.trim() || undefined;
-  chrome.storage.local.set({ provider, apiKey, strongModel, cheapModel, baseUrl });
+  const lang = langSel.value as Lang;
+  setLang(lang);
+  applyI18n();
+  chrome.storage.local.set({ provider, apiKey, strongModel, cheapModel, baseUrl, lang });
   send({ kind: "setProvider", provider, apiKey, strongModel, cheapModel, baseUrl });
   settingsSection.hidden = true;
 });
@@ -260,7 +277,7 @@ function renderConversationList(list: { id: string; title: string; turnCount: nu
     const li = document.createElement("li");
     const title = document.createElement("span");
     title.className = "h-title";
-    title.textContent = c.title || "(başlıksız)";
+    title.textContent = c.title || t("emptyTask");
     title.addEventListener("click", () => {
       send({ kind: "loadConversation", id: c.id });
       historyDrawer.hidden = true;
@@ -268,7 +285,7 @@ function renderConversationList(list: { id: string; title: string; turnCount: nu
     const del = document.createElement("button");
     del.className = "h-del";
     del.textContent = "🗑";
-    del.title = "Sil";
+    del.title = t("delete");
     del.addEventListener("click", (e) => {
       e.stopPropagation();
       send({ kind: "deleteConversation", id: c.id });
@@ -348,12 +365,12 @@ port.onMessage.addListener((ev: BackgroundEvent) => {
       addStep(ev.action, ev.thought);
       break;
     case "approvalRequest":
-      $("approval-text").textContent = `Onay gerekiyor: ${ev.description}`;
+      $("approval-text").textContent = `${t("approvalPrefix")}: ${ev.description}`;
       approvalSection.hidden = false;
       break;
     case "done":
       finishAgentTurn(
-        ev.ok ? ev.message : `Tamamlanamadı: ${ev.message}`,
+        ev.ok ? ev.message : `${t("notCompleted")}: ${ev.message}`,
         ev.ok ? "ok" : "fail",
         `${ev.steps} adım · ${ev.tokens} token`,
       );
@@ -361,7 +378,7 @@ port.onMessage.addListener((ev: BackgroundEvent) => {
       stepNo = 0;
       break;
     case "error":
-      finishAgentTurn(`Hata: ${ev.message}`, "fail");
+      finishAgentTurn(`${t("error")}: ${ev.message}`, "fail");
       setRunning(false);
       stepNo = 0;
       break;
