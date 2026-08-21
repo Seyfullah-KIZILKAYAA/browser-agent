@@ -32,6 +32,27 @@ header {
 }
 .brand { font-size: 14px; font-weight: 600; }
 .header-actions { display: flex; gap: 2px; }
+
+/* History drawer */
+.drawer-title { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+.history-list { list-style: none; margin: 0; padding: 0; }
+.history-list li {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 13px;
+}
+.history-list li:hover { background: var(--field-bg); }
+.history-list .h-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-list .h-del { background: none; border: none; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+.history-list .h-del:hover { color: var(--danger); }
+
+/* Attached file chips */
+.files { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px 0; }
+.file-chip {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
+  background: var(--user-bg); border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px;
+}
+.file-chip .x { cursor: pointer; color: var(--muted); font-weight: bold; }
+.file-chip .x:hover { color: var(--danger); }
 .icon-btn {
   background: none; border: none; color: var(--muted); cursor: pointer;
   font-size: 16px; padding: 4px 8px; border-radius: 6px;
@@ -132,3 +153,4 @@ button:disabled { opacity: .5; cursor: default; }
 }
 .send-btn:disabled { background: var(--muted); border-color: var(--muted); }
 #cancel { width: 36px; height: 36px; padding: 0; border-radius: 50%; flex: none; }
+#attach { flex: none; font-size: 16px; align-self: center; }

@@ -1,4 +1,4 @@
-import type { BrowserSession } from "@ba/core/browser";
+import type { BrowserSession, TabInfo } from "@ba/core/browser";
 import type { ContentRequest, ContentResult } from "../shared/protocol";
 
 /**
@@ -12,6 +12,33 @@ import type { ContentRequest, ContentResult } from "../shared/protocol";
  */
 export class ExtensionSession implements BrowserSession {
   constructor(private tabId: number) {}
+
+  // --- Multi-tab via chrome.tabs (content script rides along on each page) ---
+
+  async listTabs(): Promise<TabInfo[]> {
+    const tabs = await chrome.tabs.query({ currentWindow: true });
+    return tabs
+      .filter((t) => t.id !== undefined && /^https?:/.test(t.url ?? ""))
+      .map((t) => ({ id: t.id!, title: t.title ?? "", url: t.url ?? "", active: t.id === this.tabId }));
+  }
+
+  async openTab(url?: string): Promise<TabInfo> {
+    const tab = await chrome.tabs.create({ url: url ?? "about:blank", active: true });
+    if (!tab.id) throw new Error("Yeni sekme açılamadı");
+    this.tabId = tab.id;
+    await new Promise((r) => setTimeout(r, 600));
+    return { id: tab.id, title: tab.title ?? "", url: tab.url ?? url ?? "", active: true };
+  }
+
+  async switchTab(tabId: number): Promise<void> {
+    await chrome.tabs.update(tabId, { active: true });
+    this.tabId = tabId;
+  }
+
+  async closeTab(tabId: number): Promise<void> {
+    if (tabId === this.tabId) throw new Error("Aktif sekme kapatılamaz");
+    await chrome.tabs.remove(tabId);
+  }
 
   private async send(req: ContentRequest): Promise<unknown> {
     // After a navigation the new page's content script may not be injected yet

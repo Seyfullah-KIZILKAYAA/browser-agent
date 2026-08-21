@@ -1,6 +1,6 @@
 import { connect, ExtensionTransport } from "puppeteer-core/lib/esm/puppeteer/puppeteer-core-browser.js";
 import type { Browser, Page } from "puppeteer-core/lib/esm/puppeteer/puppeteer-core-browser.js";
-import type { BrowserSession } from "@ba/core/browser";
+import type { BrowserSession, TabInfo } from "@ba/core/browser";
 
 /**
  * BrowserSession backed by real CDP inside the extension (ADR 0001 upgrade).
@@ -15,9 +15,16 @@ export class CdpExtensionSession implements BrowserSession {
   private constructor(
     private browser: Browser,
     private page: Page,
+    private tabId: number,
   ) {}
 
   static async attach(tabId: number): Promise<CdpExtensionSession> {
+    const { browser, page } = await CdpExtensionSession.connectTab(tabId);
+    return new CdpExtensionSession(browser, page, tabId);
+  }
+
+  /** Attach a fresh CDP connection to a specific tab. */
+  private static async connectTab(tabId: number): Promise<{ browser: Browser; page: Page }> {
     const browser = await connect({
       transport: await ExtensionTransport.connectTab(tabId),
       defaultViewport: null,
@@ -25,7 +32,44 @@ export class CdpExtensionSession implements BrowserSession {
     });
     const [page] = await browser.pages();
     if (!page) throw new Error("CDP oturumu için sayfa alınamadı");
-    return new CdpExtensionSession(browser, page);
+    return { browser, page };
+  }
+
+  // --- Multi-tab: chrome.tabs for topology, re-attach CDP on switch ---
+
+  async listTabs(): Promise<TabInfo[]> {
+    const tabs = await chrome.tabs.query({ currentWindow: true });
+    return tabs
+      .filter((t) => t.id !== undefined && /^https?:/.test(t.url ?? ""))
+      .map((t) => ({ id: t.id!, title: t.title ?? "", url: t.url ?? "", active: t.id === this.tabId }));
+  }
+
+  async openTab(url?: string): Promise<TabInfo> {
+    const tab = await chrome.tabs.create({ url: url ?? "about:blank", active: true });
+    if (!tab.id) throw new Error("Yeni sekme açılamadı");
+    // Wait for it to have a real page, then attach CDP to it.
+    await new Promise((r) => setTimeout(r, 600));
+    await this.switchTab(tab.id);
+    return { id: tab.id, title: tab.title ?? "", url: tab.url ?? url ?? "", active: true };
+  }
+
+  async switchTab(tabId: number): Promise<void> {
+    if (tabId === this.tabId) return;
+    try {
+      await this.browser.disconnect();
+    } catch {
+      /* already detached */
+    }
+    await chrome.tabs.update(tabId, { active: true });
+    const { browser, page } = await CdpExtensionSession.connectTab(tabId);
+    this.browser = browser;
+    this.page = page;
+    this.tabId = tabId;
+  }
+
+  async closeTab(tabId: number): Promise<void> {
+    if (tabId === this.tabId) throw new Error("Aktif sekme kapatılamaz; önce başka sekmeye geç");
+    await chrome.tabs.remove(tabId);
   }
 
   async navigate(url: string): Promise<void> {

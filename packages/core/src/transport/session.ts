@@ -38,4 +38,22 @@ export interface BrowserSession {
   viewportSize(): Promise<{ width: number; height: number }>;
   /** Click raw viewport coordinates (vision/coordinate fallback — last resort). */
   clickAt(x: number, y: number): Promise<void>;
+
+  // --- Multi-tab (optional; a session that omits these has single-tab scope) ---
+
+  /** List open tabs the agent can switch between. */
+  listTabs?(): Promise<TabInfo[]>;
+  /** Open a new tab (optionally at a URL) and switch the session to it. */
+  openTab?(url?: string): Promise<TabInfo>;
+  /** Switch the session's active target to an existing tab by id. */
+  switchTab?(tabId: number): Promise<void>;
+  /** Close a tab by id. */
+  closeTab?(tabId: number): Promise<void>;
+}
+
+export interface TabInfo {
+  id: number;
+  title: string;
+  url: string;
+  active: boolean;
 }

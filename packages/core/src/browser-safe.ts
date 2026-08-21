@@ -6,7 +6,7 @@
  * telemetry/trace, compiler — all of which import node:fs / node:crypto or
  * playwright. The extension provides its own BrowserSession implementation.
  */
-export type { BrowserSession } from "./transport/session";
+export type { BrowserSession, TabInfo } from "./transport/session";
 export * from "./perception/snapshot";
 export * from "./perception/tokens";
 export * from "./perception/vision";

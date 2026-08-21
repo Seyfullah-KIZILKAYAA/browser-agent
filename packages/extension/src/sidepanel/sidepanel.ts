@@ -3,7 +3,7 @@
  * task, the agent replies with a result, and the step-by-step trace is tucked
  * behind a collapsible "Adımları göster" accordion so the screen stays calm.
  */
-import type { BackgroundEvent, PanelCommand } from "../shared/protocol";
+import type { AttachedFile, BackgroundEvent, PanelCommand } from "../shared/protocol";
 import { PANEL_PORT } from "../shared/protocol";
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
@@ -21,15 +21,40 @@ const approvalSection = $("approval");
 let running = false;
 /** The agent's turn currently being built (result line + steps list). */
 let activeTurn: { result: HTMLElement; steps: HTMLOListElement; meta: HTMLElement } | null = null;
+/** Current conversation id (a new one is minted per fresh chat). */
+let conversationId = freshId();
+/** Files staged for the next task. */
+let attachedFiles: AttachedFile[] = [];
+
+function freshId(): string {
+  return `c_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
+}
 
 // --- Chat rendering ---
 
-function addUserMessage(text: string): void {
+function addUserMessage(text: string, fileNames: string[] = []): void {
   emptyState.hidden = true;
   const el = document.createElement("div");
   el.className = "msg user";
   el.textContent = text;
+  if (fileNames.length) {
+    const f = document.createElement("div");
+    f.className = "meta";
+    f.textContent = "📎 " + fileNames.join(", ");
+    el.appendChild(f);
+  }
   chat.appendChild(el);
+  scrollDown();
+}
+
+function addAgentResult(text: string, ok: boolean): void {
+  const wrap = document.createElement("div");
+  wrap.className = "msg agent";
+  const r = document.createElement("div");
+  r.className = `result ${ok ? "ok" : "fail"}`;
+  r.textContent = text;
+  wrap.appendChild(r);
+  chat.appendChild(wrap);
   scrollDown();
 }
 
@@ -181,7 +206,7 @@ function submitTask(): void {
   const maxStepsRaw = Number($<HTMLInputElement>("max-steps").value);
   const maxSteps = Number.isFinite(maxStepsRaw) && maxStepsRaw > 0 ? maxStepsRaw : 0;
 
-  addUserMessage(task);
+  addUserMessage(task, attachedFiles.map((f) => f.name));
   taskInput.value = "";
   autoGrow();
   beginAgentTurn();
@@ -193,21 +218,100 @@ function submitTask(): void {
     validate: $<HTMLInputElement>("validate").checked,
     maxSteps,
     mode: $<HTMLSelectElement>("mode").value === "content" ? "content" : "cdp",
+    conversationId,
+    files: attachedFiles.length ? attachedFiles : undefined,
   });
+  // Files apply to the task that used them; clear the tray afterward.
+  attachedFiles = [];
+  renderFiles();
 }
 
 sendBtn.addEventListener("click", submitTask);
 cancelBtn.addEventListener("click", () => send({ kind: "cancel" }));
 
-// New chat: clear the transcript and the background conversation memory.
-$("new-chat").addEventListener("click", () => {
+// New chat: clear the transcript, background memory, and start a new conversation.
+function newChat(): void {
   if (running) return;
   send({ kind: "reset" });
+  conversationId = freshId();
   chat.querySelectorAll(".msg").forEach((el) => el.remove());
   emptyState.hidden = false;
   activeTurn = null;
+  attachedFiles = [];
+  renderFiles();
+  $("history").hidden = true;
   taskInput.focus();
+}
+$("new-chat").addEventListener("click", newChat);
+
+// --- History drawer ---
+const historyDrawer = $("history");
+$("history-toggle").addEventListener("click", () => {
+  const willShow = historyDrawer.hidden;
+  historyDrawer.hidden = !willShow;
+  settingsSection.hidden = true;
+  if (willShow) send({ kind: "listConversations" });
 });
+
+function renderConversationList(list: { id: string; title: string; turnCount: number }[]): void {
+  const ul = $<HTMLUListElement>("history-list");
+  ul.innerHTML = "";
+  $("history-empty").hidden = list.length > 0;
+  for (const c of list) {
+    const li = document.createElement("li");
+    const title = document.createElement("span");
+    title.className = "h-title";
+    title.textContent = c.title || "(başlıksız)";
+    title.addEventListener("click", () => {
+      send({ kind: "loadConversation", id: c.id });
+      historyDrawer.hidden = true;
+    });
+    const del = document.createElement("button");
+    del.className = "h-del";
+    del.textContent = "🗑";
+    del.title = "Sil";
+    del.addEventListener("click", (e) => {
+      e.stopPropagation();
+      send({ kind: "deleteConversation", id: c.id });
+    });
+    li.appendChild(title);
+    li.appendChild(del);
+    ul.appendChild(li);
+  }
+}
+
+// --- File attachment ---
+const MAX_FILE_CHARS = 20000;
+$("attach").addEventListener("click", () => $<HTMLInputElement>("file-input").click());
+$<HTMLInputElement>("file-input").addEventListener("change", async (e) => {
+  const input = e.target as HTMLInputElement;
+  for (const file of Array.from(input.files ?? [])) {
+    const text = (await file.text()).slice(0, MAX_FILE_CHARS);
+    attachedFiles.push({ name: file.name, mime: file.type || "text/plain", text });
+  }
+  input.value = "";
+  renderFiles();
+});
+
+function renderFiles(): void {
+  const box = $("files");
+  box.innerHTML = "";
+  box.hidden = attachedFiles.length === 0;
+  attachedFiles.forEach((f, i) => {
+    const chip = document.createElement("span");
+    chip.className = "file-chip";
+    chip.textContent = `📄 ${f.name}`;
+    const x = document.createElement("span");
+    x.className = "x";
+    x.textContent = "×";
+    x.addEventListener("click", () => {
+      attachedFiles.splice(i, 1);
+      renderFiles();
+    });
+    chip.appendChild(x);
+    box.appendChild(chip);
+  });
+}
 
 // Enter sends, Shift+Enter makes a newline.
 taskInput.addEventListener("keydown", (e) => {
@@ -262,5 +366,24 @@ port.onMessage.addListener((ev: BackgroundEvent) => {
       setRunning(false);
       stepNo = 0;
       break;
+    case "conversations":
+      renderConversationList(ev.list);
+      break;
+    case "conversation":
+      // Reopen a past conversation: rebuild the transcript from its turns.
+      conversationId = ev.id;
+      chat.querySelectorAll(".msg").forEach((el) => el.remove());
+      emptyState.hidden = ev.turns.length === 0;
+      for (const t of ev.turns) {
+        addUserMessage(t.task);
+        addAgentResult(t.result, t.ok);
+      }
+      break;
+    case "tabInfo":
+      addStep(ev.message);
+      break;
   }
 });
+
+// Load the conversation list once so the history badge is ready.
+send({ kind: "listConversations" });

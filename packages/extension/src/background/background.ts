@@ -17,7 +17,10 @@ import type { BackgroundEvent, PanelCommand, ProviderName } from "../shared/prot
 import { PANEL_PORT } from "../shared/protocol";
 import { ExtensionSession } from "./extension-session";
 import { CdpExtensionSession } from "./cdp-session";
+import { HistoryStore } from "./history-store";
 import type { BrowserSession } from "@ba/core/browser";
+
+const history = new HistoryStore();
 
 interface RunState {
   cancelled: boolean;
@@ -70,6 +73,23 @@ async function handleCommand(cmd: PanelCommand, post: (ev: BackgroundEvent) => v
       return;
     case "approve":
       current?.resolveApproval?.(cmd.approved);
+      return;
+    case "listConversations":
+      post({ kind: "conversations", list: await history.list() });
+      return;
+    case "loadConversation": {
+      const conv = await history.get(cmd.id);
+      if (conv) {
+        // Rebuild the in-memory follow-up context from the stored turns.
+        conversation.length = 0;
+        conv.turns.forEach((t) => conversation.push({ task: t.task, result: t.result }));
+        post({ kind: "conversation", id: conv.id, turns: conv.turns.map((t) => ({ task: t.task, result: t.result, ok: t.ok })) });
+      }
+      return;
+    }
+    case "deleteConversation":
+      await history.delete(cmd.id);
+      post({ kind: "conversations", list: await history.list() });
       return;
     case "start":
       await startRun(cmd, post);
@@ -145,6 +165,7 @@ async function startRun(
       task: cmd.task,
       // Pass the last few turns so a follow-up continues the conversation.
       history: conversation.slice(-4),
+      files: cmd.files?.map((f) => ({ name: f.name, text: f.text })),
       allowedDomains: cmd.allowedDomains,
       approver,
       human: DEFAULT_HUMAN,
@@ -165,9 +186,15 @@ async function startRun(
       },
     });
     void usedMode; // mode is internal; keep the user-facing message clean
-    // Record this turn so the next task can build on it.
+    // Record this turn for follow-up context AND persist it to history.
     conversation.push({ task: cmd.task, result: result.message });
     if (conversation.length > 8) conversation.shift();
+    await history.addTurn(cmd.conversationId, {
+      task: cmd.task,
+      result: result.message,
+      ok: result.done,
+      ts: Date.now(),
+    });
     post({
       kind: "done",
       ok: result.done,

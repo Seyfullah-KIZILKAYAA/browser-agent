@@ -1,12 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Browser Agent",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "LLM'in tarayıcıyı insan gibi sürdüğü otonom ajan — gerçek, giriş yapılmış oturumunda.",
   "permissions": ["tabs", "activeTab", "scripting", "storage", "sidePanel", "alarms", "debugger", "webNavigation"],
   "host_permissions": ["<all_urls>"],
   "icons": {
-    "128": "assets/icon128.jpg"
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
   },
   "background": {
     "service_worker": "background.js",
@@ -26,7 +28,9 @@
   "action": {
     "default_title": "Browser Agent panelini aç",
     "default_icon": {
-      "128": "assets/icon128.jpg"
+      "16": "assets/icon16.png",
+      "48": "assets/icon48.png",
+      "128": "assets/icon128.png"
     }
   }
 }

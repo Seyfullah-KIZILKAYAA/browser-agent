@@ -10,10 +10,18 @@
   <header>
     <div class="brand">Browser Agent</div>
     <div class="header-actions">
+      <button id="history-toggle" class="icon-btn" title="Geçmiş sohbetler">🕘</button>
       <button id="new-chat" class="icon-btn" title="Yeni sohbet">✎</button>
       <button id="settings-toggle" class="icon-btn" title="Ayarlar">⚙</button>
     </div>
   </header>
+
+  <!-- History drawer -->
+  <section id="history" class="drawer" hidden>
+    <div class="drawer-title">Geçmiş sohbetler</div>
+    <ul id="history-list" class="history-list"></ul>
+    <div id="history-empty" class="muted" style="text-align:center;padding:10px;">Henüz sohbet yok.</div>
+  </section>
 
   <!-- Settings drawer (hidden by default) -->
   <section id="settings" class="drawer" hidden>
@@ -77,8 +85,14 @@
     </div>
   </section>
 
+  <!-- Attached files chips -->
+  <div id="files" class="files" hidden></div>
+
   <!-- Composer -->
   <footer class="composer">
+    <input id="file-input" type="file" multiple hidden
+           accept=".txt,.csv,.json,.md,.tsv,.log,.xml,.html,.yml,.yaml">
+    <button id="attach" class="icon-btn" title="Dosya ekle">📎</button>
     <textarea id="task" rows="1" placeholder="Görev yaz…"></textarea>
     <button id="cancel" class="icon-btn" title="Durdur" hidden>■</button>
     <button id="send" class="send-btn" title="Gönder">↑</button>

@@ -44,6 +44,8 @@ export interface NavigatorOptions {
   task: string;
   /** Prior turns in this session, so a follow-up task keeps context. */
   history?: { task: string; result: string }[];
+  /** Files the user attached; their text is provided to the model as input. */
+  files?: { name: string; text: string }[];
   allowedDomains: string[];
   approver?: Approver;
   human?: HumanProfile;
@@ -112,8 +114,16 @@ export async function runNavigator(opts: NavigatorOptions): Promise<NavigatorRes
           "\n\n"
         : "";
 
+    // Attached files (trusted user input) are shown once per turn, truncated.
+    const fileContext =
+      opts.files && opts.files.length
+        ? "Attached files:\n" +
+          opts.files.map((f) => `--- ${f.name} ---\n${f.text.slice(0, 4000)}`).join("\n\n") +
+          "\n\n"
+        : "";
+
     const prompt = [
-      priorContext + `Current task: ${opts.task}`,
+      priorContext + fileContext + `Current task: ${opts.task}`,
       "",
       `Memory (this task's steps):\n${memory.render()}`,
       "",
@@ -220,10 +230,37 @@ export async function runNavigator(opts: NavigatorOptions): Promise<NavigatorRes
           expected = "extracted page text";
           break;
         }
+        case "listTabs": {
+          if (!session.listTabs) throw new Error("Bu oturum çoklu sekme desteklemiyor");
+          const tabs = await session.listTabs();
+          expected =
+            "open tabs:\n" +
+            tabs.map((t) => `  #${t.id}${t.active ? " (aktif)" : ""}: ${t.title} — ${t.url}`).join("\n");
+          break;
+        }
+        case "newTab": {
+          if (!session.openTab) throw new Error("Bu oturum çoklu sekme desteklemiyor");
+          const url = a.value || undefined;
+          if (url) assertDomainAllowed(url, opts.allowedDomains);
+          const tab = await session.openTab(url);
+          expected = `opened new tab #${tab.id}${url ? ` at ${url}` : ""}`;
+          break;
+        }
+        case "switchTab": {
+          if (!session.switchTab) throw new Error("Bu oturum çoklu sekme desteklemiyor");
+          const id = Number(a.value ?? a.index);
+          if (!Number.isFinite(id)) throw new Error("switchTab needs a tab id in value");
+          await session.switchTab(id);
+          expected = `switched to tab #${id}`;
+          break;
+        }
         default:
           throw new Error(`Unknown action type: ${a.type}`);
       }
       opts.onAction?.({ action: a, target, note: decision.thought, risk });
+      // Switching/opening a tab changes the page entirely; the new-element diff
+      // from the previous tab no longer applies.
+      if (a.type === "switchTab" || a.type === "newTab") prevSnap = undefined;
       const nowUrl = await session.currentUrl();
       // Remember successful element locators per domain for future reuse.
       if (opts.profiles && target && (a.type === "click" || a.type === "type")) {
