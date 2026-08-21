@@ -8,11 +8,12 @@
 </head>
 <body>
   <header>
-    <h1>Browser Agent</h1>
-    <button id="settings-toggle" title="Ayarlar">⚙</button>
+    <div class="brand">Browser Agent</div>
+    <button id="settings-toggle" class="icon-btn" title="Ayarlar">⚙</button>
   </header>
 
-  <section id="settings" hidden>
+  <!-- Settings drawer (hidden by default) -->
+  <section id="settings" class="drawer" hidden>
     <label>Yapay zeka sağlayıcı
       <select id="provider">
         <option value="anthropic">Anthropic (Claude)</option>
@@ -28,58 +29,57 @@
     <label>API anahtarı <span id="key-hint" class="muted"></span>
       <input id="api-key" type="password" placeholder="anahtar">
     </label>
-    <label id="baseurl-label" hidden>Base URL (özel/ollama)
+    <label id="baseurl-label" hidden>Base URL
       <input id="base-url" type="text" placeholder="http://localhost:11434/v1">
     </label>
-    <label>Güçlü model
-      <input id="strong-model" type="text" placeholder="claude-opus-5">
+    <label>Model (adım)
+      <input id="cheap-model" type="text">
     </label>
-    <label>Ucuz model (adım)
-      <input id="cheap-model" type="text" placeholder="claude-sonnet-5">
-    </label>
-    <button id="save-settings">Kaydet</button>
+    <input id="strong-model" type="hidden">
+
+    <details class="advanced">
+      <summary>Gelişmiş</summary>
+      <label>Sürüş modu
+        <select id="mode">
+          <option value="cdp">CDP — gerçek mouse/klavye</option>
+          <option value="content">Content script — DOM olayları</option>
+        </select>
+      </label>
+      <label class="row-line">İzinli alan adları <span class="muted">(boş = tüm siteler)</span>
+        <input id="domains" type="text" placeholder="boş = her site">
+      </label>
+      <label class="row-line">Maks. adım <span class="muted">(0 = sınırsız)</span>
+        <input id="max-steps" type="number" value="0" min="0">
+      </label>
+      <label class="checkline"><input id="validate" type="checkbox"> Her adımı doğrula</label>
+    </details>
+
+    <button id="save-settings" class="primary">Kaydet</button>
   </section>
 
-  <section id="task-form">
-    <label>Görev
-      <textarea id="task" rows="3" placeholder="Örn: bu sayfadaki arama kutusuna 'kablosuz kulaklık' yaz ve ara"></textarea>
-    </label>
-    <label>İzinli alan adları <span class="muted">(boş = tüm siteler)</span>
-      <input id="domains" type="text" placeholder="boş bırak = her siteye izin ver">
-    </label>
-    <div class="row">
-      <label class="inline"><input id="validate" type="checkbox"> Her adımı doğrula</label>
-      <label class="inline">Maks. adım <input id="max-steps" type="number" value="0" min="0" placeholder="0 = sınırsız"></label>
+  <!-- Chat transcript -->
+  <main id="chat">
+    <div id="empty" class="empty">
+      <p>Bir görev yaz, tarayıcıda senin için yapayım.</p>
+      <p class="muted">Örn: "google'da hava durumu Ankara ara ve sonucu söyle"</p>
     </div>
-    <label>Sürüş modu
-      <select id="mode">
-        <option value="cdp">CDP — gerçek mouse/klavye (debugger)</option>
-        <option value="content">Content script — DOM olayları</option>
-      </select>
-    </label>
-    <div class="row">
-      <button id="start" class="primary">Başlat</button>
-      <button id="cancel" disabled>Durdur</button>
-    </div>
-  </section>
+  </main>
 
-  <section id="approval" hidden>
+  <!-- Approval prompt (appears inline when needed) -->
+  <section id="approval" class="approval" hidden>
     <p id="approval-text"></p>
     <div class="row">
       <button id="approve-yes" class="danger">Onayla</button>
-      <button id="approve-no">Reddet</button>
+      <button id="approve-no" class="ghost">Reddet</button>
     </div>
   </section>
 
-  <section id="status">
-    <div id="status-line"></div>
-    <div id="token-line"></div>
-  </section>
-
-  <section id="log-section">
-    <h2>Adımlar</h2>
-    <ol id="log"></ol>
-  </section>
+  <!-- Composer -->
+  <footer class="composer">
+    <textarea id="task" rows="1" placeholder="Görev yaz…"></textarea>
+    <button id="cancel" class="icon-btn" title="Durdur" hidden>■</button>
+    <button id="send" class="send-btn" title="Gönder">↑</button>
+  </footer>
 
   <script src="sidepanel.js"></script>
 </body>

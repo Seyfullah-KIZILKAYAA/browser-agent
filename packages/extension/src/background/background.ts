@@ -145,13 +145,24 @@ async function startRun(
       validate: cmd.validate,
       maxSteps: cmd.maxSteps,
       shouldCancel: () => state.cancelled,
-      log: (message) => post({ kind: "log", message }),
+      log: (message) => {
+        // navigator logs each step as "step N: <action> — <thought>". Split it
+        // into a structured step event so the UI can render it cleanly; other
+        // lines (failures, notes) go through as plain log messages.
+        const m = message.match(/^step (\d+):\s*(.+?)(?:\s+—\s+(.*))?$/);
+        if (m) {
+          post({ kind: "step", n: Number(m[1]), action: m[2]!.trim(), thought: (m[3] ?? "").trim() });
+        } else {
+          post({ kind: "log", message: message.trim() });
+        }
+      },
     });
+    void usedMode; // mode is internal; keep the user-facing message clean
     post({
       kind: "done",
       ok: result.done,
       reason: result.reason,
-      message: `[${usedMode}] ${result.message}`,
+      message: result.message,
       steps: result.steps,
       tokens: budget.total,
     });

@@ -1,6 +1,7 @@
 /**
- * Side panel UI: collects the task, streams live step events from the
- * background, and surfaces the human-in-the-loop approval dialog.
+ * Side panel UI — a minimal chat-style surface (Claude-like): the user types a
+ * task, the agent replies with a result, and the step-by-step trace is tucked
+ * behind a collapsible "Adımları göster" accordion so the screen stays calm.
  */
 import type { BackgroundEvent, PanelCommand } from "../shared/protocol";
 import { PANEL_PORT } from "../shared/protocol";
@@ -10,29 +11,100 @@ const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) 
 const port = chrome.runtime.connect({ name: PANEL_PORT });
 const send = (cmd: PanelCommand): void => port.postMessage(cmd);
 
-const logEl = $<HTMLOListElement>("log");
-const statusLine = $("status-line");
-const tokenLine = $("token-line");
-const startBtn = $<HTMLButtonElement>("start");
+const chat = $("chat");
+const emptyState = $("empty");
+const taskInput = $<HTMLTextAreaElement>("task");
+const sendBtn = $<HTMLButtonElement>("send");
 const cancelBtn = $<HTMLButtonElement>("cancel");
 const approvalSection = $("approval");
 
-function addLog(text: string, thought?: string): void {
+let running = false;
+/** The agent's turn currently being built (result line + steps list). */
+let activeTurn: { result: HTMLElement; steps: HTMLOListElement; meta: HTMLElement } | null = null;
+
+// --- Chat rendering ---
+
+function addUserMessage(text: string): void {
+  emptyState.hidden = true;
+  const el = document.createElement("div");
+  el.className = "msg user";
+  el.textContent = text;
+  chat.appendChild(el);
+  scrollDown();
+}
+
+/** Start an agent turn: a status line + an (initially empty, hidden) steps box. */
+function beginAgentTurn(): void {
+  const wrap = document.createElement("div");
+  wrap.className = "msg agent";
+
+  const result = document.createElement("div");
+  result.className = "result running";
+  result.textContent = "Çalışıyor…";
+
+  const stepsDetails = document.createElement("details");
+  stepsDetails.className = "steps";
+  stepsDetails.hidden = true; // shown once the first step arrives
+  const summary = document.createElement("summary");
+  summary.textContent = "Adımları göster";
+  const steps = document.createElement("ol");
+  stepsDetails.appendChild(summary);
+  stepsDetails.appendChild(steps);
+
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  meta.hidden = true;
+
+  wrap.appendChild(result);
+  wrap.appendChild(stepsDetails);
+  wrap.appendChild(meta);
+  chat.appendChild(wrap);
+  activeTurn = { result, steps, meta };
+  scrollDown();
+}
+
+function addStep(text: string, thought?: string): void {
+  if (!activeTurn) return;
+  const details = activeTurn.steps.parentElement as HTMLDetailsElement;
+  details.hidden = false;
   const li = document.createElement("li");
   li.textContent = text;
   if (thought) {
-    const span = document.createElement("div");
-    span.className = "thought";
-    span.textContent = thought;
-    li.appendChild(span);
+    const t = document.createElement("div");
+    t.className = "thought";
+    t.textContent = thought;
+    li.appendChild(t);
   }
-  logEl.appendChild(li);
-  logEl.scrollTop = logEl.scrollHeight;
+  activeTurn.steps.appendChild(li);
+  scrollDown();
 }
 
-function setRunning(running: boolean): void {
-  startBtn.disabled = running;
-  cancelBtn.disabled = !running;
+function finishAgentTurn(text: string, kind: "ok" | "fail", meta?: string): void {
+  if (!activeTurn) return;
+  activeTurn.result.className = `result ${kind}`;
+  activeTurn.result.textContent = text;
+  if (meta) {
+    activeTurn.meta.hidden = false;
+    activeTurn.meta.textContent = meta;
+  }
+  // Collapse the steps summary label to reflect it's done.
+  const summary = activeTurn.steps.parentElement?.querySelector("summary");
+  if (summary && activeTurn.steps.children.length) {
+    summary.textContent = `Adımları göster (${activeTurn.steps.children.length})`;
+  }
+  activeTurn = null;
+  scrollDown();
+}
+
+function scrollDown(): void {
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function setRunning(on: boolean): void {
+  running = on;
+  cancelBtn.hidden = !on;
+  sendBtn.hidden = on;
+  taskInput.disabled = on;
 }
 
 // --- Settings ---
@@ -43,18 +115,16 @@ const cheapInput = $<HTMLInputElement>("cheap-model");
 const baseUrlLabel = $("baseurl-label");
 const keyHint = $("key-hint");
 
-/** Per-provider defaults and hints, shown when the vendor changes. */
 const PROVIDER_INFO: Record<string, { strong: string; cheap: string; key: string; base?: boolean }> = {
   anthropic: { strong: "claude-opus-5", cheap: "claude-sonnet-5", key: "ANTHROPIC_API_KEY" },
   openai: { strong: "gpt-4o", cheap: "gpt-4o-mini", key: "OPENAI_API_KEY" },
-  gemini: { strong: "gemini-3.6-flash", cheap: "gemini-3.5-flash-lite", key: "GEMINI_API_KEY (aistudio.google.com/apikey)" },
+  gemini: { strong: "gemini-3.6-flash", cheap: "gemini-3.5-flash-lite", key: "aistudio.google.com/apikey" },
   openrouter: { strong: "anthropic/claude-3.5-sonnet", cheap: "openai/gpt-4o-mini", key: "OpenRouter anahtarı" },
   deepseek: { strong: "deepseek-reasoner", cheap: "deepseek-chat", key: "DeepSeek anahtarı" },
-  groq: { strong: "openai/gpt-oss-120b", cheap: "openai/gpt-oss-20b", key: "Groq anahtarı (console.groq.com/keys)" },
+  groq: { strong: "openai/gpt-oss-120b", cheap: "openai/gpt-oss-20b", key: "console.groq.com/keys" },
   ollama: { strong: "llama3.1", cheap: "llama3.1", key: "gerekmez", base: true },
   custom: { strong: "gpt-4o", cheap: "gpt-4o-mini", key: "opsiyonel", base: true },
 };
-
 const DEFAULT_INFO = PROVIDER_INFO.anthropic!;
 
 function applyProviderInfo(name: string, fillModels: boolean): void {
@@ -65,12 +135,10 @@ function applyProviderInfo(name: string, fillModels: boolean): void {
     strongInput.value = info.strong;
     cheapInput.value = info.cheap;
   }
-  strongInput.placeholder = info.strong;
   cheapInput.placeholder = info.cheap;
 }
 
 providerSel.addEventListener("change", () => applyProviderInfo(providerSel.value, true));
-
 $("settings-toggle").addEventListener("click", () => {
   settingsSection.hidden = !settingsSection.hidden;
 });
@@ -84,14 +152,7 @@ chrome.storage.local.get(["provider", "apiKey", "strongModel", "cheapModel", "ba
   strongInput.value = s.strongModel ?? PROVIDER_INFO[provider]?.strong ?? "";
   cheapInput.value = s.cheapModel ?? PROVIDER_INFO[provider]?.cheap ?? "";
   if (s.apiKey || provider === "ollama") {
-    send({
-      kind: "setProvider",
-      provider,
-      apiKey: s.apiKey ?? "",
-      strongModel: s.strongModel,
-      cheapModel: s.cheapModel,
-      baseUrl: s.baseUrl,
-    });
+    send({ kind: "setProvider", provider, apiKey: s.apiKey ?? "", strongModel: s.strongModel, cheapModel: s.cheapModel, baseUrl: s.baseUrl });
   }
 });
 
@@ -106,26 +167,24 @@ $("save-settings").addEventListener("click", () => {
   settingsSection.hidden = true;
 });
 
-// --- Task control ---
-startBtn.addEventListener("click", () => {
-  const task = $<HTMLTextAreaElement>("task").value.trim();
-  // Accept "https://github.com/foo" and reduce it to the bare host "github.com".
+// --- Composer / task control ---
+function submitTask(): void {
+  if (running) return;
+  const task = taskInput.value.trim();
+  if (!task) return;
+
   const entered = $<HTMLInputElement>("domains").value
     .split(",")
     .map((d) => d.trim().replace(/^https?:\/\//i, "").replace(/\/.*$/, "").replace(/^www\./i, ""))
     .filter(Boolean);
-  // Empty domains = full-browser mode ("*"): any site allowed.
   const domains = entered.length ? entered : ["*"];
-  if (!task) return addLog("⚠ Görev boş.");
-  if (domains[0] === "*") addLog("⚠ Tüm sitelere izin verildi (sınırsız mod). Yıkıcı aksiyonlarda onay istenir.");
-  // 0 (or empty) = unlimited steps; the run then stops on done/ask, budget,
-  // repeated failures, or the Durdur button.
   const maxStepsRaw = Number($<HTMLInputElement>("max-steps").value);
   const maxSteps = Number.isFinite(maxStepsRaw) && maxStepsRaw > 0 ? maxStepsRaw : 0;
-  if (maxSteps === 0) addLog("⚠ Adım sınırı yok. Gerekirse 'Durdur' ile durdur.");
-  logEl.innerHTML = "";
-  statusLine.textContent = "Çalışıyor…";
-  tokenLine.textContent = "";
+
+  addUserMessage(task);
+  taskInput.value = "";
+  autoGrow();
+  beginAgentTurn();
   setRunning(true);
   send({
     kind: "start",
@@ -135,8 +194,23 @@ startBtn.addEventListener("click", () => {
     maxSteps,
     mode: $<HTMLSelectElement>("mode").value === "content" ? "content" : "cdp",
   });
-});
+}
+
+sendBtn.addEventListener("click", submitTask);
 cancelBtn.addEventListener("click", () => send({ kind: "cancel" }));
+
+// Enter sends, Shift+Enter makes a newline.
+taskInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    submitTask();
+  }
+});
+function autoGrow(): void {
+  taskInput.style.height = "auto";
+  taskInput.style.height = Math.min(taskInput.scrollHeight, 120) + "px";
+}
+taskInput.addEventListener("input", autoGrow);
 
 $("approve-yes").addEventListener("click", () => {
   approvalSection.hidden = true;
@@ -148,26 +222,35 @@ $("approve-no").addEventListener("click", () => {
 });
 
 // --- Event stream ---
+let stepNo = 0;
 port.onMessage.addListener((ev: BackgroundEvent) => {
   switch (ev.kind) {
     case "log":
-      addLog(ev.message);
+      // Only surface warnings/notes as steps; routine logs already show as steps.
+      addStep(ev.message);
       break;
     case "step":
-      addLog(`${ev.n}. ${ev.action}`, ev.thought);
+      stepNo = ev.n;
+      // The <ol> numbers the steps; don't repeat the number in the text.
+      addStep(ev.action, ev.thought);
       break;
     case "approvalRequest":
-      $("approval-text").textContent = `Yıkıcı aksiyon onayı gerekiyor: ${ev.description}`;
+      $("approval-text").textContent = `Onay gerekiyor: ${ev.description}`;
       approvalSection.hidden = false;
       break;
     case "done":
-      statusLine.textContent = ev.ok ? `✓ ${ev.message}` : `✗ (${ev.reason}) ${ev.message}`;
-      tokenLine.textContent = `${ev.steps} adım · ${ev.tokens} token`;
+      finishAgentTurn(
+        ev.ok ? ev.message : `Tamamlanamadı: ${ev.message}`,
+        ev.ok ? "ok" : "fail",
+        `${ev.steps} adım · ${ev.tokens} token`,
+      );
       setRunning(false);
+      stepNo = 0;
       break;
     case "error":
-      statusLine.textContent = `Hata: ${ev.message}`;
+      finishAgentTurn(`Hata: ${ev.message}`, "fail");
       setRunning(false);
+      stepNo = 0;
       break;
   }
 });
