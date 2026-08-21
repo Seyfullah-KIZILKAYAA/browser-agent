@@ -14,10 +14,23 @@ export class ExtensionSession implements BrowserSession {
   constructor(private tabId: number) {}
 
   private async send(req: ContentRequest): Promise<unknown> {
-    const res = (await chrome.tabs.sendMessage(this.tabId, req)) as ContentResult | undefined;
-    if (!res) throw new Error("Content script did not respond (page not ready?)");
-    if (!res.ok) throw new Error(res.error);
-    return res.value;
+    // After a navigation the new page's content script may not be injected yet
+    // ("Receiving end does not exist"); retry briefly until it's listening.
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      try {
+        const res = (await chrome.tabs.sendMessage(this.tabId, req)) as ContentResult | undefined;
+        if (!res) throw new Error("Content script did not respond (page not ready?)");
+        if (!res.ok) throw new Error(res.error);
+        return res.value;
+      } catch (err) {
+        lastErr = err;
+        const msg = String((err as Error)?.message ?? err);
+        if (!/Receiving end does not exist|not established|page not ready/i.test(msg)) throw err;
+        await new Promise((r) => setTimeout(r, 300));
+      }
+    }
+    throw lastErr;
   }
 
   async navigate(url: string): Promise<void> {

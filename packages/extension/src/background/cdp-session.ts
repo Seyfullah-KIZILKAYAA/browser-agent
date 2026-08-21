@@ -30,6 +30,7 @@ export class CdpExtensionSession implements BrowserSession {
 
   async navigate(url: string): Promise<void> {
     await this.page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await this.waitSettled();
   }
   async currentUrl(): Promise<string> {
     return this.page.url();
@@ -40,11 +41,37 @@ export class CdpExtensionSession implements BrowserSession {
 
   async evaluate<T>(pageFunction: string, arg?: unknown): Promise<T> {
     const expr = `(${pageFunction})(${arg === undefined ? "undefined" : JSON.stringify(arg)})`;
-    return this.page.evaluate(expr) as Promise<T>;
+    try {
+      return (await this.page.evaluate(expr)) as T;
+    } catch (err) {
+      // A mid-navigation eval kills the JS context ("Cannot find context with
+      // specified id" / "Execution context was destroyed"). Wait for the page
+      // to settle, then retry once.
+      const msg = String((err as Error)?.message ?? err);
+      if (/context|destroyed|detached/i.test(msg)) {
+        await this.waitSettled();
+        return (await this.page.evaluate(expr)) as T;
+      }
+      throw err;
+    }
+  }
+
+  /** Wait for DOM readiness after a navigation before touching the context. */
+  private async waitSettled(): Promise<void> {
+    try {
+      await this.page.waitForFunction("document.readyState === 'interactive' || document.readyState === 'complete'", {
+        timeout: 8000,
+      });
+    } catch {
+      await new Promise((r) => setTimeout(r, 500));
+    }
   }
 
   async click(selector: string): Promise<void> {
     await this.page.click(selector);
+    // A click may trigger navigation; give the new page a moment to settle so
+    // the next snapshot runs in a live context, not a destroyed one.
+    await this.waitSettled();
   }
   async fill(selector: string, value: string): Promise<void> {
     const el = await this.page.$(selector);
