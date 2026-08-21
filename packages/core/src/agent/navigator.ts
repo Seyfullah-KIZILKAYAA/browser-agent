@@ -86,12 +86,15 @@ export async function runNavigator(opts: NavigatorOptions): Promise<NavigatorRes
   const human = opts.human ?? DEFAULT_HUMAN;
   const rng = opts.rng ?? new Rng(1);
   const memory = new AgentMemory(3);
+  // maxSteps <= 0 means unlimited: the run then stops only on done/ask, the
+  // token/USD budget, consecutive failures, or user cancel — no step ceiling.
   const maxSteps = opts.maxSteps ?? 30;
+  const unlimited = maxSteps <= 0;
   const maxFailures = opts.maxConsecutiveFailures ?? 3;
   let consecutiveFailures = 0;
   let prevSnap: Snapshot | undefined;
 
-  for (let step = 1; step <= maxSteps; step++) {
+  for (let step = 1; unlimited || step <= maxSteps; step++) {
     if (opts.shouldCancel?.()) {
       return { done: false, reason: "cancelled", message: "Kullanici iptal etti", steps: step - 1 };
     }

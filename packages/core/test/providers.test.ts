@@ -5,12 +5,16 @@ import { AnthropicProvider } from "../src/llm/provider";
 import { makeProvider, providerFromEnv, hasAnyProviderConfigured } from "../src/llm/factory";
 
 function mockFetch(responseJson: unknown) {
-  const spy = vi.fn(async () => ({
+  const make = () => ({
     ok: true,
     status: 200,
     json: async () => responseJson,
     text: async () => JSON.stringify(responseJson),
-  }));
+    clone() {
+      return make();
+    },
+  });
+  const spy = vi.fn(async () => make());
   vi.stubGlobal("fetch", spy);
   return spy;
 }
@@ -36,6 +40,9 @@ describe("OpenAI-compatible provider", () => {
     expect(body.messages[0]).toEqual({ role: "system", content: "sen bir botsun" });
     expect(body.messages[1]).toEqual({ role: "user", content: "selam" });
     expect(spy.mock.calls[0]![0]).toBe("https://x/v1/chat/completions");
+    // JSON mode + no tools, so tool-calling models return text, not a tool call.
+    expect(body.response_format).toEqual({ type: "json_object" });
+    expect(body.tool_choice).toBe("none");
   });
 
   it("attaches an image for vision", async () => {
@@ -50,6 +57,42 @@ describe("OpenAI-compatible provider", () => {
     expect((openRouter("m", "k") as unknown as { baseUrl: string }).baseUrl).toContain("openrouter.ai");
     expect((deepSeek("m", "k") as unknown as { baseUrl: string }).baseUrl).toContain("deepseek.com");
     expect((ollama("m") as unknown as { baseUrl: string }).baseUrl).toContain("11434");
+  });
+
+  it("retries without response_format when the endpoint rejects it", async () => {
+    let call = 0;
+    const spy = vi.fn(async () => {
+      call++;
+      if (call === 1) {
+        const body = { error: { message: "response_format is not supported" } };
+        return {
+          ok: false,
+          status: 400,
+          json: async () => body,
+          text: async () => JSON.stringify(body),
+          clone() {
+            return { text: async () => JSON.stringify(body) };
+          },
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: "ikinci deneme" } }] }),
+        text: async () => "",
+        clone() {
+          return this;
+        },
+      };
+    });
+    vi.stubGlobal("fetch", spy);
+    const p = new OpenAIProvider({ apiKey: "k" });
+    const res = await p.complete({ system: "s", messages: [{ role: "user", content: "q" }] });
+    expect(res.text).toBe("ikinci deneme");
+    expect(spy).toHaveBeenCalledTimes(2);
+    const retryBody = JSON.parse(spy.mock.calls[1]![1].body);
+    expect(retryBody.response_format).toBeUndefined();
+    expect(retryBody.tool_choice).toBeUndefined();
   });
 });
 

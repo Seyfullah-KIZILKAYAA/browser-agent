@@ -118,6 +118,11 @@ startBtn.addEventListener("click", () => {
   const domains = entered.length ? entered : ["*"];
   if (!task) return addLog("⚠ Görev boş.");
   if (domains[0] === "*") addLog("⚠ Tüm sitelere izin verildi (sınırsız mod). Yıkıcı aksiyonlarda onay istenir.");
+  // 0 (or empty) = unlimited steps; the run then stops on done/ask, budget,
+  // repeated failures, or the Durdur button.
+  const maxStepsRaw = Number($<HTMLInputElement>("max-steps").value);
+  const maxSteps = Number.isFinite(maxStepsRaw) && maxStepsRaw > 0 ? maxStepsRaw : 0;
+  if (maxSteps === 0) addLog("⚠ Adım sınırı yok. Gerekirse 'Durdur' ile durdur.");
   logEl.innerHTML = "";
   statusLine.textContent = "Çalışıyor…";
   tokenLine.textContent = "";
@@ -127,7 +132,7 @@ startBtn.addEventListener("click", () => {
     task,
     allowedDomains: domains,
     validate: $<HTMLInputElement>("validate").checked,
-    maxSteps: Number($<HTMLInputElement>("max-steps").value) || 30,
+    maxSteps,
     mode: $<HTMLSelectElement>("mode").value === "content" ? "content" : "cdp",
   });
 });

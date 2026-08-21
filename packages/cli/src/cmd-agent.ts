@@ -28,7 +28,7 @@ export async function cmdAgent(args: ParsedArgs): Promise<void> {
   const domains = strFlag(args.flags, "domains");
   if (!task || !domains) {
     console.error(
-      'Usage: ba agent "<görev>" --domains a.com,b.com [--headful] [--validate] [--fast] [--yes] [--profile <dir>] [--max-steps 30]',
+      'Usage: ba agent "<görev>" --domains a.com,b.com [--headful] [--validate] [--fast] [--yes] [--profile <dir>] [--max-steps 0=sınırsız]',
     );
     process.exitCode = 1;
     return;

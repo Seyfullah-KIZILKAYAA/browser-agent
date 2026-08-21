@@ -50,11 +50,37 @@ export class OpenAIProvider implements LLMProvider {
     const headers: Record<string, string> = { "content-type": "application/json" };
     if (this.apiKey) headers["authorization"] = `Bearer ${sanitizeHeaderValue(this.apiKey, "API anahtarı")}`;
 
-    const res = await fetch(`${this.baseUrl}/chat/completions`, {
+    const body: Record<string, unknown> = {
+      model: this.model,
+      max_tokens: opts.maxTokens ?? 1024,
+      messages,
+      // Every agent prompt asks for a single JSON object. Forcing JSON mode
+      // stops tool-calling models (e.g. Groq's gpt-oss) from emitting a tool
+      // call instead of text, which would 400 with "tool_use_failed".
+      response_format: { type: "json_object" },
+      // Belt-and-suspenders: explicitly forbid tool use even if the endpoint
+      // has tools configured server-side.
+      tool_choice: "none",
+    };
+
+    let res = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ model: this.model, max_tokens: opts.maxTokens ?? 1024, messages }),
+      body: JSON.stringify(body),
     });
+    // Some endpoints reject response_format/tool_choice; retry without them.
+    if (res.status === 400) {
+      const errText = await res.clone().text();
+      if (/response_format|tool_choice|json_object|not supported|unknown/i.test(errText)) {
+        delete body.response_format;
+        delete body.tool_choice;
+        res = await fetch(`${this.baseUrl}/chat/completions`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(body),
+        });
+      }
+    }
     if (!res.ok) {
       throw new Error(`OpenAI-compatible API error ${res.status}: ${await res.text()}`);
     }
