@@ -199,6 +199,16 @@ function submitTask(): void {
 sendBtn.addEventListener("click", submitTask);
 cancelBtn.addEventListener("click", () => send({ kind: "cancel" }));
 
+// New chat: clear the transcript and the background conversation memory.
+$("new-chat").addEventListener("click", () => {
+  if (running) return;
+  send({ kind: "reset" });
+  chat.querySelectorAll(".msg").forEach((el) => el.remove());
+  emptyState.hidden = false;
+  activeTurn = null;
+  taskInput.focus();
+});
+
 // Enter sends, Shift+Enter makes a newline.
 taskInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {

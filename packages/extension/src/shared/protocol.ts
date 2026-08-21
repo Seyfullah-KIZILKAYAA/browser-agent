@@ -18,6 +18,7 @@ export type ProviderName =
 export type PanelCommand =
   | { kind: "start"; task: string; allowedDomains: string[]; validate: boolean; maxSteps: number; mode: DriveMode }
   | { kind: "cancel" }
+  | { kind: "reset" }
   | { kind: "approve"; approved: boolean }
   | {
       kind: "setProvider";

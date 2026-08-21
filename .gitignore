@@ -5,4 +5,5 @@ examples/runs/
 runs/
 tests/regression/.work/
 .ba-profiles/
+_preview.mjs
 .env

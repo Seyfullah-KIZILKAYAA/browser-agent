@@ -66,5 +66,6 @@ await esbuild.build({
 await cp("src/manifest.json", `${outdir}/manifest.json`);
 await cp("src/sidepanel/sidepanel.html", `${outdir}/sidepanel.html`);
 await cp("src/sidepanel/sidepanel.css", `${outdir}/sidepanel.css`);
+await cp("src/assets", `${outdir}/assets`, { recursive: true });
 
 console.log(`\nBuilt extension → ${outdir}/  (load unpacked in chrome://extensions)`);

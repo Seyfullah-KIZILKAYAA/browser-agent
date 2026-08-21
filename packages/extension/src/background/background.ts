@@ -31,6 +31,8 @@ let strongModel = "claude-opus-5";
 let cheapModel = "claude-sonnet-5";
 let baseUrl: string | undefined;
 let current: RunState | null = null;
+/** Conversation so far (task + result), so follow-up tasks keep context. */
+const conversation: { task: string; result: string }[] = [];
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
@@ -62,6 +64,9 @@ async function handleCommand(cmd: PanelCommand, post: (ev: BackgroundEvent) => v
     case "cancel":
       if (current) current.cancelled = true;
       post({ kind: "log", message: "İptal istendi." });
+      return;
+    case "reset":
+      conversation.length = 0; // forget prior turns; next task starts fresh
       return;
     case "approve":
       current?.resolveApproval?.(cmd.approved);
@@ -138,6 +143,8 @@ async function startRun(
       provider,
       budget,
       task: cmd.task,
+      // Pass the last few turns so a follow-up continues the conversation.
+      history: conversation.slice(-4),
       allowedDomains: cmd.allowedDomains,
       approver,
       human: DEFAULT_HUMAN,
@@ -158,6 +165,9 @@ async function startRun(
       },
     });
     void usedMode; // mode is internal; keep the user-facing message clean
+    // Record this turn so the next task can build on it.
+    conversation.push({ task: cmd.task, result: result.message });
+    if (conversation.length > 8) conversation.shift();
     post({
       kind: "done",
       ok: result.done,

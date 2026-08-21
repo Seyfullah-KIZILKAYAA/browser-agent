@@ -42,6 +42,8 @@ export interface NavigatorOptions {
   provider: LLMProvider;
   budget: BudgetGuard;
   task: string;
+  /** Prior turns in this session, so a follow-up task keeps context. */
+  history?: { task: string; result: string }[];
   allowedDomains: string[];
   approver?: Approver;
   human?: HumanProfile;
@@ -101,10 +103,19 @@ export async function runNavigator(opts: NavigatorOptions): Promise<NavigatorRes
     if (human.enabled) await session.waitMs(rng.int(300, 700));
     const snap = await takeSnapshot(session);
 
+    // Prior turns give a follow-up ("also search other sites") the context of
+    // what was already done, so it continues instead of starting over.
+    const priorContext =
+      opts.history && opts.history.length
+        ? "Earlier in this conversation:\n" +
+          opts.history.map((h, i) => `${i + 1}. Task: ${h.task}\n   Result: ${h.result}`).join("\n") +
+          "\n\n"
+        : "";
+
     const prompt = [
-      `Task: ${opts.task}`,
+      priorContext + `Current task: ${opts.task}`,
       "",
-      `Memory:\n${memory.render()}`,
+      `Memory (this task's steps):\n${memory.render()}`,
       "",
       "Current page (a * marks elements new since your last step):",
       // K3: on large pages, rank elements by relevance to the task to cut tokens.
