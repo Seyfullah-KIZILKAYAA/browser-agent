@@ -1,0 +1,20 @@
+{
+  "name": "@ba/core",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./browser": { "types": "./dist/browser-safe.d.ts", "default": "./dist/browser-safe.js" }
+  },
+  "dependencies": {
+    "@ba/shared": "workspace:*",
+    "papaparse": "^5.4.1",
+    "playwright-core": "^1.48.0",
+    "xlsx": "^0.18.5",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/papaparse": "^5.3.14"
+  }
+}

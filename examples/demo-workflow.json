@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "name": "demo-fiyat-guncelle",
+  "createdBy": "manual",
+  "allowedDomains": ["file"],
+  "inputs": [
+    { "name": "sku", "type": "string", "source": "column:SKU", "required": true },
+    { "name": "fiyat", "type": "string", "source": "column:Fiyat", "required": true }
+  ],
+  "steps": [
+    { "id": "s1", "action": "navigate", "url": "file:///{{demoPath}}", "risk": "read", "note": "demo formunu aç" },
+    { "id": "s2", "action": "type", "target": "@t1", "value": "{{sku}}", "clearFirst": true, "risk": "write", "note": "SKU gir" },
+    { "id": "s3", "action": "type", "target": "@t2", "value": "{{fiyat}}", "clearFirst": true, "risk": "write", "note": "fiyat gir" },
+    { "id": "s4", "action": "click", "target": "@t3", "risk": "write", "note": "kaydet" },
+    { "id": "s5", "action": "waitFor", "condition": { "textPresent": "Kaydedildi: {{sku}}" }, "timeoutMs": 5000, "risk": "read", "note": "sonucu doğrula" }
+  ],
+  "targets": {
+    "@t1": { "role": "textbox", "name": "SKU", "css": "#sku-input", "xpath": null, "testId": null, "text": null, "nth": 0, "anchor": null },
+    "@t2": { "role": "textbox", "name": "Satış Fiyatı", "css": "#price-input", "xpath": null, "testId": null, "text": null, "nth": 0, "anchor": { "role": "heading", "name": "Fiyatlandırma" } },
+    "@t3": { "role": "button", "name": "Kaydet", "css": "#save", "xpath": null, "testId": null, "text": "Kaydet", "nth": 0, "anchor": null }
+  },
+  "onFailure": "abort",
+  "budget": { "maxTokens": 200000 }
+}

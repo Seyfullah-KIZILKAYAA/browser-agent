@@ -1,0 +1,17 @@
+{
+  "name": "@ba/extension",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@ba/core": "workspace:*",
+    "@ba/shared": "workspace:*",
+    "puppeteer-core": "^24.31.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.270",
+    "esbuild": "^0.21.5"
+  }
+}

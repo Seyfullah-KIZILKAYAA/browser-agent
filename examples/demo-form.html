@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>Demo Ürün Paneli</title>
+  <style>
+    body { font-family: sans-serif; max-width: 480px; margin: 2rem auto; }
+    label { display: block; margin-top: 1rem; }
+    input { width: 100%; padding: .4rem; }
+    button { margin-top: 1rem; padding: .5rem 1.5rem; }
+    #status { margin-top: 1rem; color: green; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Fiyatlandırma</h1>
+  <form id="product">
+    <label>SKU
+      <input type="text" name="sku" id="sku-input" required>
+    </label>
+    <label>Satış Fiyatı
+      <input type="text" name="price" id="price-input" required>
+    </label>
+    <button type="submit" id="save">Kaydet</button>
+  </form>
+  <div id="status"></div>
+  <script>
+    document.getElementById("product").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var sku = document.getElementById("sku-input").value;
+      var price = document.getElementById("price-input").value;
+      document.getElementById("status").textContent =
+        sku && price ? "Kaydedildi: " + sku + " → " + price + " TL" : "Eksik alan!";
+    });
+  </script>
+</body>
+</html>

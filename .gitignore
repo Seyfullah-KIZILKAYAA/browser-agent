@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.tsbuildinfo
+examples/runs/
+runs/
+tests/regression/.work/
+.ba-profiles/
+.env

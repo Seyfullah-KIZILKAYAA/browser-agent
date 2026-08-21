@@ -1,0 +1,53 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #666;
+  --border: #ddd;
+  --primary: #2563eb;
+  --danger: #dc2626;
+  --ok: #16a34a;
+  --panel: #f7f7f8;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e; --fg: #eaeaea; --muted: #999; --border: #3a3a3a;
+    --primary: #3b82f6; --danger: #ef4444; --ok: #22c55e; --panel: #262626;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; font: 13px/1.4 system-ui, sans-serif;
+  background: var(--bg); color: var(--fg);
+}
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border-bottom: 1px solid var(--border);
+}
+h1 { font-size: 15px; margin: 0; }
+h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+section { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+label { display: block; margin-bottom: 8px; font-size: 12px; color: var(--muted); }
+label.inline { display: inline-flex; align-items: center; gap: 4px; margin: 0; }
+input[type=text], input[type=password], textarea, input[type=number] {
+  width: 100%; padding: 6px 8px; margin-top: 3px; border: 1px solid var(--border);
+  border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit;
+}
+input[type=number] { width: 60px; }
+.row { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+button {
+  padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--panel); color: var(--fg); font: inherit; cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--muted); }
+button:disabled { opacity: .5; cursor: default; }
+button.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+button.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+#settings-toggle { padding: 2px 8px; font-size: 16px; }
+#status-line { font-weight: 600; }
+#token-line { color: var(--muted); font-size: 12px; margin-top: 2px; }
+#approval { background: color-mix(in srgb, var(--danger) 12%, var(--bg)); }
+ol#log { margin: 0; padding-left: 18px; max-height: 40vh; overflow-y: auto; }
+ol#log li { margin-bottom: 6px; }
+ol#log .thought { color: var(--muted); font-size: 11px; }
+select { width: 100%; padding: 6px 8px; margin-top: 3px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; }
+.muted { color: var(--muted); font-weight: normal; font-size: 11px; }

@@ -1,0 +1,19 @@
+{
+  "name": "browser-agent",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "tsc -b packages/shared packages/core packages/cli",
+    "test": "vitest run",
+    "regression": "node tests/regression/run-regression.mjs 500",
+    "cli": "node packages/cli/dist/index.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0",
+    "@types/node": "^22.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}

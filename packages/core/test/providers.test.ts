@@ -1,0 +1,107 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { OpenAIProvider, openRouter, deepSeek, ollama } from "../src/llm/openai-provider";
+import { GeminiProvider } from "../src/llm/gemini-provider";
+import { AnthropicProvider } from "../src/llm/provider";
+import { makeProvider, providerFromEnv, hasAnyProviderConfigured } from "../src/llm/factory";
+
+function mockFetch(responseJson: unknown) {
+  const spy = vi.fn(async () => ({
+    ok: true,
+    status: 200,
+    json: async () => responseJson,
+    text: async () => JSON.stringify(responseJson),
+  }));
+  vi.stubGlobal("fetch", spy);
+  return spy;
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+describe("OpenAI-compatible provider", () => {
+  it("sends system + user messages and parses the choice", async () => {
+    const spy = mockFetch({
+      choices: [{ message: { content: "merhaba" } }],
+      usage: { prompt_tokens: 10, completion_tokens: 3 },
+    });
+    const p = new OpenAIProvider({ model: "gpt-4o-mini", apiKey: "k", baseUrl: "https://x/v1" });
+    const res = await p.complete({ system: "sen bir botsun", messages: [{ role: "user", content: "selam" }] });
+
+    expect(res.text).toBe("merhaba");
+    expect(res.usage.inputTokens).toBe(10);
+    expect(res.usage.outputTokens).toBe(3);
+    const body = JSON.parse(spy.mock.calls[0]![1].body);
+    expect(body.messages[0]).toEqual({ role: "system", content: "sen bir botsun" });
+    expect(body.messages[1]).toEqual({ role: "user", content: "selam" });
+    expect(spy.mock.calls[0]![0]).toBe("https://x/v1/chat/completions");
+  });
+
+  it("attaches an image for vision", async () => {
+    const spy = mockFetch({ choices: [{ message: { content: "ok" } }] });
+    const p = new OpenAIProvider({ apiKey: "k" });
+    await p.complete({ system: "s", messages: [{ role: "user", content: "bak", imageBase64: "AAAA" }] });
+    const body = JSON.parse(spy.mock.calls[0]![1].body);
+    expect(body.messages[1].content[1].type).toBe("image_url");
+  });
+
+  it("factory hosts point at the right base URLs", () => {
+    expect((openRouter("m", "k") as unknown as { baseUrl: string }).baseUrl).toContain("openrouter.ai");
+    expect((deepSeek("m", "k") as unknown as { baseUrl: string }).baseUrl).toContain("deepseek.com");
+    expect((ollama("m") as unknown as { baseUrl: string }).baseUrl).toContain("11434");
+  });
+});
+
+describe("Gemini provider", () => {
+  it("uses system_instruction + contents and parses candidates", async () => {
+    const spy = mockFetch({
+      candidates: [{ content: { parts: [{ text: "yanıt" }] } }],
+      usageMetadata: { promptTokenCount: 5, candidatesTokenCount: 2 },
+    });
+    const p = new GeminiProvider("gemini-2.0-flash", "k");
+    const res = await p.complete({ system: "sistem", messages: [{ role: "user", content: "soru" }] });
+
+    expect(res.text).toBe("yanıt");
+    expect(res.usage.inputTokens).toBe(5);
+    const body = JSON.parse(spy.mock.calls[0]![1].body);
+    expect(body.system_instruction.parts[0].text).toBe("sistem");
+    expect(body.contents[0].role).toBe("user");
+  });
+});
+
+describe("Anthropic provider", () => {
+  it("parses cache token fields", async () => {
+    mockFetch({
+      content: [{ type: "text", text: "cevap" }],
+      usage: { input_tokens: 8, output_tokens: 4, cache_read_input_tokens: 100 },
+    });
+    const p = new AnthropicProvider("claude-sonnet-5", "k");
+    const res = await p.complete({ system: "s", messages: [{ role: "user", content: "q" }] });
+    expect(res.text).toBe("cevap");
+    expect(res.usage.cacheReadTokens).toBe(100);
+  });
+});
+
+describe("provider factory", () => {
+  it("builds each vendor by name", () => {
+    expect(makeProvider({ provider: "openai", model: "gpt-4o", apiKey: "k" })).toBeInstanceOf(OpenAIProvider);
+    expect(makeProvider({ provider: "gemini", model: "g", apiKey: "k" })).toBeInstanceOf(GeminiProvider);
+    expect(makeProvider({ provider: "anthropic", model: "c", apiKey: "k" })).toBeInstanceOf(AnthropicProvider);
+    expect(makeProvider({ provider: "custom", model: "m", baseUrl: "http://x/v1" })).toBeInstanceOf(OpenAIProvider);
+  });
+
+  it("respects BA_PROVIDER from env", () => {
+    vi.stubEnv("BA_PROVIDER", "openai");
+    vi.stubEnv("OPENAI_API_KEY", "k");
+    expect(providerFromEnv("gpt-4o")).toBeInstanceOf(OpenAIProvider);
+    vi.unstubAllEnvs();
+  });
+
+  it("detects a configured provider", () => {
+    vi.stubEnv("BA_PROVIDER", "");
+    vi.stubEnv("OPENAI_API_KEY", "k");
+    expect(hasAnyProviderConfigured()).toBe(true);
+    vi.unstubAllEnvs();
+  });
+});

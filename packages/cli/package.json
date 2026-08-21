@@ -1,0 +1,10 @@
+{
+  "name": "@ba/cli",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "bin": { "ba": "dist/index.js" },
+  "dependencies": {
+    "@ba/core": "workspace:*",
+    "@ba/shared": "workspace:*"
+  }
+}

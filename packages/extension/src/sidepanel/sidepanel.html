@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Browser Agent</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header>
+    <h1>Browser Agent</h1>
+    <button id="settings-toggle" title="Ayarlar">⚙</button>
+  </header>
+
+  <section id="settings" hidden>
+    <label>Yapay zeka sağlayıcı
+      <select id="provider">
+        <option value="anthropic">Anthropic (Claude)</option>
+        <option value="openai">OpenAI (GPT)</option>
+        <option value="gemini">Google Gemini</option>
+        <option value="openrouter">OpenRouter</option>
+        <option value="deepseek">DeepSeek</option>
+        <option value="groq">Groq</option>
+        <option value="ollama">Ollama (yerel)</option>
+        <option value="custom">Özel (OpenAI uyumlu)</option>
+      </select>
+    </label>
+    <label>API anahtarı <span id="key-hint" class="muted"></span>
+      <input id="api-key" type="password" placeholder="anahtar">
+    </label>
+    <label id="baseurl-label" hidden>Base URL (özel/ollama)
+      <input id="base-url" type="text" placeholder="http://localhost:11434/v1">
+    </label>
+    <label>Güçlü model
+      <input id="strong-model" type="text" placeholder="claude-opus-5">
+    </label>
+    <label>Ucuz model (adım)
+      <input id="cheap-model" type="text" placeholder="claude-sonnet-5">
+    </label>
+    <button id="save-settings">Kaydet</button>
+  </section>
+
+  <section id="task-form">
+    <label>Görev
+      <textarea id="task" rows="3" placeholder="Örn: bu sayfadaki arama kutusuna 'kablosuz kulaklık' yaz ve ara"></textarea>
+    </label>
+    <label>İzinli alan adları <span class="muted">(boş = tüm siteler)</span>
+      <input id="domains" type="text" placeholder="boş bırak = her siteye izin ver">
+    </label>
+    <div class="row">
+      <label class="inline"><input id="validate" type="checkbox"> Her adımı doğrula</label>
+      <label class="inline">Maks. adım <input id="max-steps" type="number" value="30" min="1" max="100"></label>
+    </div>
+    <label>Sürüş modu
+      <select id="mode">
+        <option value="cdp">CDP — gerçek mouse/klavye (debugger)</option>
+        <option value="content">Content script — DOM olayları</option>
+      </select>
+    </label>
+    <div class="row">
+      <button id="start" class="primary">Başlat</button>
+      <button id="cancel" disabled>Durdur</button>
+    </div>
+  </section>
+
+  <section id="approval" hidden>
+    <p id="approval-text"></p>
+    <div class="row">
+      <button id="approve-yes" class="danger">Onayla</button>
+      <button id="approve-no">Reddet</button>
+    </div>
+  </section>
+
+  <section id="status">
+    <div id="status-line"></div>
+    <div id="token-line"></div>
+  </section>
+
+  <section id="log-section">
+    <h2>Adımlar</h2>
+    <ol id="log"></ol>
+  </section>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
