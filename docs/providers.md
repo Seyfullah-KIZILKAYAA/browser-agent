@@ -10,7 +10,7 @@ bütçesi kontrolü hep bizde kalır (LangChain yok).
 |---|---|---|---|
 | Anthropic (Claude) | `anthropic` | `ANTHROPIC_API_KEY` | `claude-sonnet-5` |
 | OpenAI (GPT) | `openai` | `OPENAI_API_KEY` | `gpt-4o-mini` |
-| Google Gemini | `gemini` | `GEMINI_API_KEY` / `GOOGLE_API_KEY` | `gemini-2.0-flash` |
+| Google Gemini | `gemini` | `GEMINI_API_KEY` / `GOOGLE_API_KEY` | `gemini-3.6-flash` |
 | OpenRouter | `openrouter` | `OPENROUTER_API_KEY` | `anthropic/claude-3.5-sonnet` |
 | DeepSeek | `deepseek` | `DEEPSEEK_API_KEY` | `deepseek-chat` |
 | Groq | `groq` | `GROQ_API_KEY` | `openai/gpt-oss-20b` |

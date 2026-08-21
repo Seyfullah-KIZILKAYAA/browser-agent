@@ -47,7 +47,7 @@ const keyHint = $("key-hint");
 const PROVIDER_INFO: Record<string, { strong: string; cheap: string; key: string; base?: boolean }> = {
   anthropic: { strong: "claude-opus-5", cheap: "claude-sonnet-5", key: "ANTHROPIC_API_KEY" },
   openai: { strong: "gpt-4o", cheap: "gpt-4o-mini", key: "OPENAI_API_KEY" },
-  gemini: { strong: "gemini-2.0-pro", cheap: "gemini-2.0-flash", key: "GEMINI_API_KEY" },
+  gemini: { strong: "gemini-3.6-flash", cheap: "gemini-3.5-flash-lite", key: "GEMINI_API_KEY (aistudio.google.com/apikey)" },
   openrouter: { strong: "anthropic/claude-3.5-sonnet", cheap: "openai/gpt-4o-mini", key: "OpenRouter anahtarı" },
   deepseek: { strong: "deepseek-reasoner", cheap: "deepseek-chat", key: "DeepSeek anahtarı" },
   groq: { strong: "openai/gpt-oss-120b", cheap: "openai/gpt-oss-20b", key: "Groq anahtarı (console.groq.com/keys)" },

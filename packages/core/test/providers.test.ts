@@ -198,7 +198,7 @@ describe("Gemini provider", () => {
       candidates: [{ content: { parts: [{ text: "yanıt" }] } }],
       usageMetadata: { promptTokenCount: 5, candidatesTokenCount: 2 },
     });
-    const p = new GeminiProvider("gemini-2.0-flash", "k");
+    const p = new GeminiProvider("gemini-3.6-flash", "k");
     const res = await p.complete({ system: "sistem", messages: [{ role: "user", content: "soru" }] });
 
     expect(res.text).toBe("yanıt");
@@ -206,6 +206,48 @@ describe("Gemini provider", () => {
     const body = JSON.parse(spy.mock.calls[0]![1].body);
     expect(body.system_instruction.parts[0].text).toBe("sistem");
     expect(body.contents[0].role).toBe("user");
+  });
+
+  it("retries with the suggested model on a 404 deprecation", async () => {
+    let call = 0;
+    const spy = vi.fn(async (url: string) => {
+      call++;
+      if (call === 1) {
+        const body = {
+          error: {
+            code: 404,
+            message: "This model models/gemini-old is no longer available. Please use models/gemini-3.6-flash instead.",
+          },
+        };
+        return {
+          ok: false,
+          status: 404,
+          headers: { get: () => null },
+          json: async () => body,
+          text: async () => JSON.stringify(body),
+          clone() {
+            return { text: async () => JSON.stringify(body) };
+          },
+        };
+      }
+      // Second call must target the suggested model.
+      expect(url).toContain("gemini-3.6-flash");
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        json: async () => ({ candidates: [{ content: { parts: [{ text: "kurtarıldı" }] } }] }),
+        text: async () => "",
+        clone() {
+          return this;
+        },
+      };
+    });
+    vi.stubGlobal("fetch", spy);
+    const p = new GeminiProvider("gemini-old", "k");
+    const res = await p.complete({ system: "s", messages: [{ role: "user", content: "q" }] });
+    expect(res.text).toBe("kurtarıldı");
+    expect(spy).toHaveBeenCalledTimes(2);
   });
 });
 

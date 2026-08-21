@@ -15,7 +15,7 @@ interface GeminiPart {
  */
 export class GeminiProvider implements LLMProvider {
   constructor(
-    private model: string = env("BA_MODEL") ?? "gemini-2.0-flash",
+    private model: string = env("BA_MODEL") ?? "gemini-3.6-flash",
     private apiKey: string | undefined = env("GEMINI_API_KEY") ?? env("GOOGLE_API_KEY"),
   ) {}
 
@@ -32,16 +32,28 @@ export class GeminiProvider implements LLMProvider {
     });
 
     const key = sanitizeHeaderValue(this.apiKey, "GEMINI_API_KEY");
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${key}`;
-    const res = await fetchWithRetry(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: opts.system }] },
-        contents,
-        generationConfig: { maxOutputTokens: opts.maxTokens ?? 1024 },
-      }),
+    const requestBody = JSON.stringify({
+      system_instruction: { parts: [{ text: opts.system }] },
+      contents,
+      generationConfig: { maxOutputTokens: opts.maxTokens ?? 1024 },
     });
+    const callModel = (model: string) =>
+      fetchWithRetry(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+        { method: "POST", headers: { "content-type": "application/json" }, body: requestBody },
+      );
+
+    let res = await callModel(this.model);
+    // Google retires models often; a 404 usually names the replacement. Retry
+    // with the suggested model so a deprecation doesn't break the run.
+    if (res.status === 404) {
+      const errText = await res.clone().text();
+      const suggested = errText.match(/use\s+models\/([\w.-]+)/i)?.[1];
+      if (suggested && suggested !== this.model) {
+        this.model = suggested; // remember for the rest of this run
+        res = await callModel(suggested);
+      }
+    }
     if (!res.ok) {
       throw new Error(`Gemini API error ${res.status}: ${await res.text()}`);
     }

@@ -59,7 +59,7 @@ function defaultModel(provider: ProviderName): string {
   switch (provider) {
     case "anthropic": return "claude-sonnet-5";
     case "openai": return "gpt-4o-mini";
-    case "gemini": return "gemini-2.0-flash";
+    case "gemini": return "gemini-3.6-flash";
     case "openrouter": return "anthropic/claude-3.5-sonnet";
     case "deepseek": return "deepseek-chat";
     case "groq": return "openai/gpt-oss-20b";
