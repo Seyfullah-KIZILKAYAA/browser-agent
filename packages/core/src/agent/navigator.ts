@@ -133,13 +133,53 @@ export async function runNavigator(opts: NavigatorOptions): Promise<NavigatorRes
     ].join("\n");
     prevSnap = snap;
 
-    const res = await provider.complete({
-      system: NAVIGATOR_SYSTEM,
-      messages: [{ role: "user", content: prompt }],
-      maxTokens: 500,
-    });
-    budget.record(res.usage, "navigator");
-    const decision = extractJson<NavDecision>(res.text);
+    // Ask for the decision. Models that "think" before answering can burn the
+    // output budget and return truncated or garbled text, so give room and
+    // retry once with a stricter reminder instead of failing the whole task.
+    let decision: NavDecision | null = null;
+    let lastRaw = "";
+    for (let attempt = 0; attempt < 2 && !decision; attempt++) {
+      const res = await provider.complete({
+        system: NAVIGATOR_SYSTEM,
+        messages: [
+          {
+            role: "user",
+            content:
+              attempt === 0
+                ? prompt
+                : prompt +
+                  "\n\nYour previous reply was not valid JSON. Reply with ONLY the JSON object, no prose, no markdown fences.",
+          },
+        ],
+        maxTokens: 2000,
+      });
+      budget.record(res.usage, "navigator");
+      lastRaw = res.text;
+      try {
+        decision = extractJson<NavDecision>(res.text);
+      } catch {
+        opts.log?.("  model gecersiz yanit verdi, tekrar deneniyor");
+      }
+    }
+    if (!decision) {
+      memory.add({
+        n: step,
+        thought: "(no decision)",
+        action: "none",
+        outcome: `FAILED: model returned unusable output: ${lastRaw.slice(0, 80)}`,
+      });
+      opts.log?.(`  step ${step}: model gecerli JSON dondurmedi`);
+      if (++consecutiveFailures >= maxFailures) {
+        return {
+          done: false,
+          reason: "failures",
+          message: "Model gecerli JSON dondurmedi. Daha buyuk/guclu bir model deneyin.",
+          steps: step,
+        };
+      }
+      prevSnap = undefined;
+      continue;
+    }
     const a = decision.action;
     const risk = decision.risk ?? "read";
     opts.log?.(`step ${step}: ${a.type} ${a.index ?? a.value ?? ""} — ${decision.thought}`);
@@ -313,13 +353,20 @@ export async function runNavigator(opts: NavigatorOptions): Promise<NavigatorRes
             ].join("\n"),
           },
         ],
-        maxTokens: 150,
+        maxTokens: 600,
       });
       budget.record(vRes.usage, "validator");
-      const v = extractJson<Validation>(vRes.text);
-      outcome = `${expected} — ${v.success ? "OK" : "NOT OK"}: ${v.reason}`;
+      // A validator that returns unparseable output must not kill the task —
+      // treat it as "no verdict" and carry on with the plain expected outcome.
+      let v: Validation | null = null;
+      try {
+        v = extractJson<Validation>(vRes.text);
+      } catch {
+        opts.log?.("  dogrulayici gecersiz yanit verdi, atlaniyor");
+      }
+      outcome = v ? `${expected} — ${v.success ? "OK" : "NOT OK"}: ${v.reason}` : expected;
       prevSnap = after;
-      if (v.taskComplete) {
+      if (v?.taskComplete) {
         memory.add({ n: step, thought: decision.thought, action: a.type, outcome });
         return { done: true, reason: "done", message: v.reason, steps: step };
       }
