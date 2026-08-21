@@ -1,4 +1,4 @@
-import { LLMMessage, LLMProvider, LLMResponse, sanitizeHeaderValue } from "./provider";
+import { fetchWithRetry, LLMMessage, LLMProvider, LLMResponse, sanitizeHeaderValue } from "./provider";
 
 function env(name: string): string | undefined {
   return typeof process !== "undefined" ? process.env[name] : undefined;
@@ -33,7 +33,7 @@ export class GeminiProvider implements LLMProvider {
 
     const key = sanitizeHeaderValue(this.apiKey, "GEMINI_API_KEY");
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${key}`;
-    const res = await fetch(url, {
+    const res = await fetchWithRetry(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({

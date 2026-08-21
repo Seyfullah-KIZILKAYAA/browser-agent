@@ -55,6 +55,48 @@ export function sanitizeHeaderValue(value: string, label: string): string {
   return cleaned;
 }
 
+/** Parse a wait time (seconds) from a Retry-After header or a rate-limit message. */
+function retryDelayMs(res: Response, bodyText: string): number {
+  const header = res.headers.get("retry-after");
+  if (header) {
+    const secs = Number(header);
+    if (Number.isFinite(secs)) return Math.min(secs * 1000, 30_000);
+  }
+  // Groq/OpenAI put "try again in 1.75s" (or "...in 500ms") in the message.
+  const m = bodyText.match(/try again in\s+([\d.]+)\s*(ms|s)/i);
+  if (m) {
+    const val = Number(m[1]);
+    const unit = (m[2] ?? "s").toLowerCase();
+    return Math.min(unit === "ms" ? val : val * 1000, 30_000);
+  }
+  return 2000; // sensible default backoff
+}
+
+/**
+ * fetch() that transparently waits out rate limits (429) and transient server
+ * errors (500/502/503/529), honoring Retry-After / "try again in Xs". Returns
+ * the final Response (which may still be an error) after up to `maxRetries`.
+ */
+export async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  opts: { maxRetries?: number; onWait?: (ms: number, attempt: number) => void } = {},
+): Promise<Response> {
+  const maxRetries = opts.maxRetries ?? 4;
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, init);
+    const retriable = res.status === 429 || res.status === 500 || res.status === 502 || res.status === 503 || res.status === 529;
+    if (!retriable || attempt >= maxRetries) return res;
+    const text = await res.clone().text();
+    // A 400 tool_use_failed is NOT retriable here (handled by the caller).
+    const base = retryDelayMs(res, text);
+    // Exponential-ish backoff on top of the server hint, capped.
+    const wait = Math.min(base + attempt * 500, 30_000);
+    opts.onWait?.(wait, attempt + 1);
+    await new Promise((r) => setTimeout(r, wait));
+  }
+}
+
 /** Anthropic Messages API via fetch. Requires ANTHROPIC_API_KEY. */
 export class AnthropicProvider implements LLMProvider {
   constructor(
@@ -70,7 +112,7 @@ export class AnthropicProvider implements LLMProvider {
     if (!this.apiKey) {
       throw new Error("ANTHROPIC_API_KEY is not set — COMPILE/HEAL modes need it. EXECUTE mode works without it.");
     }
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await fetchWithRetry("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "content-type": "application/json",

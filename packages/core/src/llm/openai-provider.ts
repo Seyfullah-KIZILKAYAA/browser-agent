@@ -1,4 +1,4 @@
-import { LLMMessage, LLMProvider, LLMResponse, sanitizeHeaderValue } from "./provider";
+import { fetchWithRetry, LLMMessage, LLMProvider, LLMResponse, sanitizeHeaderValue } from "./provider";
 
 function env(name: string): string | undefined {
   return typeof process !== "undefined" ? process.env[name] : undefined;
@@ -115,7 +115,7 @@ export class OpenAIProvider implements LLMProvider {
       response_format: { type: "json_object" },
     };
 
-    let res = await fetch(`${this.baseUrl}/chat/completions`, {
+    let res = await fetchWithRetry(`${this.baseUrl}/chat/completions`, {
       method: "POST",
       headers,
       body: JSON.stringify(body),
@@ -135,7 +135,7 @@ export class OpenAIProvider implements LLMProvider {
       // Endpoint rejects response_format? Retry once without it.
       if (/response_format|json_object|not supported|unknown/i.test(errText)) {
         delete body.response_format;
-        res = await fetch(`${this.baseUrl}/chat/completions`, {
+        res = await fetchWithRetry(`${this.baseUrl}/chat/completions`, {
           method: "POST",
           headers,
           body: JSON.stringify(body),

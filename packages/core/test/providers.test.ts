@@ -8,6 +8,7 @@ function mockFetch(responseJson: unknown) {
   const make = () => ({
     ok: true,
     status: 200,
+    headers: { get: () => null },
     json: async () => responseJson,
     text: async () => JSON.stringify(responseJson),
     clone() {
@@ -151,6 +152,43 @@ describe("recoverFromToolCall", () => {
   it("returns null when there is nothing to recover", () => {
     expect(recoverFromToolCall('{"error":{"message":"rate limited"}}')).toBeNull();
     expect(recoverFromToolCall("not json at all")).toBeNull();
+  });
+});
+
+describe("rate-limit retry", () => {
+  it("waits out a 429 then succeeds", async () => {
+    let call = 0;
+    const spy = vi.fn(async () => {
+      call++;
+      if (call === 1) {
+        const body = { error: { message: "Rate limit reached. Please try again in 0s." } };
+        return {
+          ok: false,
+          status: 429,
+          headers: { get: (h: string) => (h.toLowerCase() === "retry-after" ? "0" : null) },
+          json: async () => body,
+          text: async () => JSON.stringify(body),
+          clone() {
+            return { text: async () => JSON.stringify(body) };
+          },
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        json: async () => ({ choices: [{ message: { content: "429 sonrası başarı" } }] }),
+        text: async () => "",
+        clone() {
+          return this;
+        },
+      };
+    });
+    vi.stubGlobal("fetch", spy);
+    const p = new OpenAIProvider({ apiKey: "k" });
+    const res = await p.complete({ system: "s", messages: [{ role: "user", content: "q" }] });
+    expect(res.text).toBe("429 sonrası başarı");
+    expect(spy).toHaveBeenCalledTimes(2); // one 429, one success
   });
 });
 

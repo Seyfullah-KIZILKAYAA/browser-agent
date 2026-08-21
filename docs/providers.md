@@ -71,6 +71,16 @@ JSON'umuza çevirir (`recoverFromToolCall`), böylece adım kaybolmaz.
 Yine de bu davranış sık tekrarlarsa daha büyük modele geç: `openai/gpt-oss-120b`
 (strong+cheap ikisi de) veya farklı bir sağlayıcı (Gemini flash, DeepSeek).
 
+## Rate limit (429)
+
+Groq ücretsiz katmanında dakikada token (TPM) sınırı düşüktür (ör. 8000). Ajan
+her adımda snapshot gönderdiği için uzun görevlerde bu aşılabilir. Tüm
+sağlayıcılar `fetchWithRetry` ile 429 ve geçici 5xx hatalarında otomatik bekler
+(Retry-After / "try again in Xs" ipucunu okur) ve yeniden dener — görev birkaç
+saniye duraklayıp devam eder, çökmez. Sık 429 alıyorsan: Groq Dev Tier'a geç,
+daha küçük bir model kullan, ya da `--fast` yerine varsayılan insansı gecikmeyi
+koru (istekleri zamana yayar).
+
 ## Uzantı
 
 Side panel'de ⚙ → **Yapay zeka sağlayıcı** açılır menüsünden seçilir; anahtar ve
