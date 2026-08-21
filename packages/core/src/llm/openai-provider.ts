@@ -4,6 +4,59 @@ function env(name: string): string | undefined {
   return typeof process !== "undefined" ? process.env[name] : undefined;
 }
 
+/**
+ * When a tool-calling model (Groq gpt-oss) ignores JSON mode and emits a tool
+ * call, the API 400s but includes the attempted call in `failed_generation`,
+ * e.g. {"name":"browser.type","arguments":{"index":6,"value":"..."}}.
+ * We translate that into the text-JSON shape our agents parse, so the intent
+ * isn't lost. Returns null if nothing recoverable is present.
+ */
+export function recoverFromToolCall(errText: string): string | null {
+  let failed: string | undefined;
+  try {
+    failed = JSON.parse(errText)?.error?.failed_generation;
+  } catch {
+    const m = errText.match(/"failed_generation":\s*"((?:[^"\\]|\\.)*)"/);
+    if (m) {
+      try {
+        failed = JSON.parse(`"${m[1]}"`);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  if (!failed) return null;
+
+  let call: { name?: string; arguments?: Record<string, unknown> };
+  try {
+    call = typeof failed === "string" ? JSON.parse(failed) : failed;
+  } catch {
+    return null;
+  }
+  const args = call.arguments ?? {};
+  // Map the tool name (browser.type / browser.click / browser.action / ...)
+  // to our action type, defaulting to any explicit args.type.
+  const rawName = String(call.name ?? "").split(".").pop() ?? "";
+  const type = typeof args.type === "string" ? args.type : rawName;
+  if (!type) return null;
+
+  const action: Record<string, unknown> = { type };
+  if ("index" in args) action.index = args.index;
+  if ("value" in args) action.value = args.value;
+  if ("url" in args) action.url = args.url;
+  if ("text" in args) action.text = args.text;
+
+  // Conservative risk: writes are "write"; only navigation/scroll/read are "read".
+  const writeActions = ["type", "click", "select", "check", "keypress"];
+  const risk = writeActions.includes(type) ? "write" : "read";
+
+  return JSON.stringify({
+    thought: "(model bir araç çağrısı üretti; niyeti kurtarıldı)",
+    action,
+    risk,
+  });
+}
+
 export interface OpenAICompatibleOptions {
   model?: string;
   apiKey?: string;
@@ -54,13 +107,12 @@ export class OpenAIProvider implements LLMProvider {
       model: this.model,
       max_tokens: opts.maxTokens ?? 1024,
       messages,
-      // Every agent prompt asks for a single JSON object. Forcing JSON mode
-      // stops tool-calling models (e.g. Groq's gpt-oss) from emitting a tool
-      // call instead of text, which would 400 with "tool_use_failed".
+      // Every agent prompt asks for a single JSON object. JSON mode nudges
+      // tool-calling models (e.g. Groq's gpt-oss) toward text instead of a
+      // tool call. We do NOT send tool_choice:"none" — with these models it
+      // paradoxically triggers a 400 ("choice is none, but model called a
+      // tool"); instead we recover the model's intent from failed_generation.
       response_format: { type: "json_object" },
-      // Belt-and-suspenders: explicitly forbid tool use even if the endpoint
-      // has tools configured server-side.
-      tool_choice: "none",
     };
 
     let res = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -68,12 +120,21 @@ export class OpenAIProvider implements LLMProvider {
       headers,
       body: JSON.stringify(body),
     });
-    // Some endpoints reject response_format/tool_choice; retry without them.
     if (res.status === 400) {
       const errText = await res.clone().text();
-      if (/response_format|tool_choice|json_object|not supported|unknown/i.test(errText)) {
+      // Recover a tool-happy model's intent: Groq returns the attempted tool
+      // call in failed_generation; translate it back into the text JSON our
+      // agents expect (action/value/index...).
+      const recovered = recoverFromToolCall(errText);
+      if (recovered) {
+        return {
+          text: recovered,
+          usage: { inputTokens: 0, outputTokens: 0, model: this.model },
+        };
+      }
+      // Endpoint rejects response_format? Retry once without it.
+      if (/response_format|json_object|not supported|unknown/i.test(errText)) {
         delete body.response_format;
-        delete body.tool_choice;
         res = await fetch(`${this.baseUrl}/chat/completions`, {
           method: "POST",
           headers,

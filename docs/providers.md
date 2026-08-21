@@ -60,6 +60,17 @@ Groq → Ollama). Böylece sadece anahtarı verip başlamak yeter.
 
 Her katman aynı sağlayıcının farklı modelidir (örn. Anthropic'te opus + sonnet).
 
+## Groq / gpt-oss ve araç-çağrısı (tool-call) davranışı
+
+Groq'un `gpt-oss` modelleri agentic eğitildiğinden, biz düz JSON istesek ve JSON
+mode göndersek bile bazen kendiliğinden bir "tool call" üretir. Groq bunu 400 ile
+reddeder (`tool_use_failed`). `OpenAIProvider` bu durumu yakalar: hatanın
+`failed_generation` alanındaki tool argümanlarını ayrıştırıp bizim aksiyon
+JSON'umuza çevirir (`recoverFromToolCall`), böylece adım kaybolmaz.
+
+Yine de bu davranış sık tekrarlarsa daha büyük modele geç: `openai/gpt-oss-120b`
+(strong+cheap ikisi de) veya farklı bir sağlayıcı (Gemini flash, DeepSeek).
+
 ## Uzantı
 
 Side panel'de ⚙ → **Yapay zeka sağlayıcı** açılır menüsünden seçilir; anahtar ve

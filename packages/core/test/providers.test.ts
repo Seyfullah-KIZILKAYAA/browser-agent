@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { OpenAIProvider, openRouter, deepSeek, ollama } from "../src/llm/openai-provider";
+import { OpenAIProvider, openRouter, deepSeek, ollama, recoverFromToolCall } from "../src/llm/openai-provider";
 import { GeminiProvider } from "../src/llm/gemini-provider";
 import { AnthropicProvider } from "../src/llm/provider";
 import { makeProvider, providerFromEnv, hasAnyProviderConfigured } from "../src/llm/factory";
@@ -40,9 +40,10 @@ describe("OpenAI-compatible provider", () => {
     expect(body.messages[0]).toEqual({ role: "system", content: "sen bir botsun" });
     expect(body.messages[1]).toEqual({ role: "user", content: "selam" });
     expect(spy.mock.calls[0]![0]).toBe("https://x/v1/chat/completions");
-    // JSON mode + no tools, so tool-calling models return text, not a tool call.
+    // JSON mode nudges tool-calling models toward text. We do NOT send
+    // tool_choice:"none" — with gpt-oss it triggers a 400 instead.
     expect(body.response_format).toEqual({ type: "json_object" });
-    expect(body.tool_choice).toBe("none");
+    expect(body.tool_choice).toBeUndefined();
   });
 
   it("attaches an image for vision", async () => {
@@ -92,7 +93,64 @@ describe("OpenAI-compatible provider", () => {
     expect(spy).toHaveBeenCalledTimes(2);
     const retryBody = JSON.parse(spy.mock.calls[1]![1].body);
     expect(retryBody.response_format).toBeUndefined();
-    expect(retryBody.tool_choice).toBeUndefined();
+  });
+
+  it("recovers a tool call from a Groq 400 into our action JSON", async () => {
+    // The exact error Groq's gpt-oss returns when it emits a tool call.
+    const errBody = {
+      error: {
+        message: "Tool choice is none, but model called a tool",
+        code: "tool_use_failed",
+        failed_generation: JSON.stringify({
+          name: "browser.type",
+          arguments: { index: 6, value: "en ucuz satıcı" },
+        }),
+      },
+    };
+    const spy = vi.fn(async () => ({
+      ok: false,
+      status: 400,
+      json: async () => errBody,
+      text: async () => JSON.stringify(errBody),
+      clone() {
+        return { text: async () => JSON.stringify(errBody) };
+      },
+    }));
+    vi.stubGlobal("fetch", spy);
+    const p = new OpenAIProvider({ apiKey: "k" });
+    const res = await p.complete({ system: "s", messages: [{ role: "user", content: "q" }] });
+    const parsed = JSON.parse(res.text);
+    expect(parsed.action.type).toBe("type");
+    expect(parsed.action.index).toBe(6);
+    expect(parsed.action.value).toBe("en ucuz satıcı");
+    expect(parsed.risk).toBe("write"); // type is a write action
+    expect(spy).toHaveBeenCalledTimes(1); // recovered, no retry needed
+  });
+});
+
+describe("recoverFromToolCall", () => {
+  it("maps browser.click to a click action", () => {
+    const err = JSON.stringify({
+      error: { failed_generation: JSON.stringify({ name: "browser.click", arguments: { index: 3 } }) },
+    });
+    const out = JSON.parse(recoverFromToolCall(err)!);
+    expect(out.action).toEqual({ type: "click", index: 3 });
+    expect(out.risk).toBe("write");
+  });
+
+  it("honors an explicit args.type over the tool name", () => {
+    const err = JSON.stringify({
+      error: { failed_generation: JSON.stringify({ name: "browser.action", arguments: { type: "navigate", url: "https://x.com" } }) },
+    });
+    const out = JSON.parse(recoverFromToolCall(err)!);
+    expect(out.action.type).toBe("navigate");
+    expect(out.action.url).toBe("https://x.com");
+    expect(out.risk).toBe("read"); // navigate is not a write
+  });
+
+  it("returns null when there is nothing to recover", () => {
+    expect(recoverFromToolCall('{"error":{"message":"rate limited"}}')).toBeNull();
+    expect(recoverFromToolCall("not json at all")).toBeNull();
   });
 });
 
