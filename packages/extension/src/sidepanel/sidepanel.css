@@ -48,6 +48,10 @@ header {
   width: 100%; padding: 7px 9px; margin-top: 4px; border: 1px solid var(--border);
   border-radius: 8px; background: var(--field-bg); color: var(--fg); font: inherit;
 }
+/* Hide the number-input up/down spinner arrows. */
+.drawer input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+.drawer input[type=number]::-webkit-outer-spin-button,
+.drawer input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .checkline { display: flex; align-items: center; gap: 6px; }
 .checkline input { width: auto; margin: 0; }
 .advanced { margin: 8px 0; }
@@ -117,7 +121,9 @@ button:disabled { opacity: .5; cursor: default; }
   flex: 1; resize: none; border: 1px solid var(--border); border-radius: 12px;
   padding: 9px 12px; font: inherit; background: var(--field-bg); color: var(--fg);
   max-height: 120px; overflow-y: auto;
+  scrollbar-width: none; /* Firefox: hide scrollbar (still scrollable) */
 }
+.composer textarea::-webkit-scrollbar { display: none; } /* Chrome/WebKit */
 .composer textarea:focus { outline: none; border-color: var(--primary); }
 .send-btn {
   width: 36px; height: 36px; padding: 0; border-radius: 50%;
