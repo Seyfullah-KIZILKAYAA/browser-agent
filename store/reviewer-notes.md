@@ -29,10 +29,10 @@ The user may give a task on any website, so the extension must be able to read
 and interact with the page wherever the user is. It is only active after the
 user starts a task.
 
-### `tabs`, `activeTab`, `scripting`
-Needed to read the current page's interactive elements and perform actions
-(click, type) to carry out the task. `tabs` also enables the multi-tab feature
-(open/switch tabs) so the agent can gather info in one tab and use it in another.
+### `tabs`, `activeTab`
+Needed to read the current page and perform the task. `tabs` also powers the
+multi-tab feature (open/switch tabs) so the agent can gather info in one tab and
+use it in another.
 
 ### `storage`
 Stores the user's API key, provider settings, and chat history locally in
@@ -42,6 +42,16 @@ Stores the user's API key, provider settings, and chat history locally in
 - `sidePanel`: the extension's UI is a side panel.
 - `alarms`: a short heartbeat keeps the service worker alive during a running task.
 - `webNavigation`: detect page load/navigation so the agent acts on a settled page.
+
+## Remote code: NO
+The extension does **not** use remote code. All JavaScript is bundled in the
+package; nothing is fetched or `eval`-ed from a remote source, and there are no
+`<script src="http...">` tags. The extension drives the tab exclusively via the
+Chrome DevTools Protocol (`chrome.debugger` through puppeteer-core's
+ExtensionTransport); page scripts run in the page via the CDP `Runtime.evaluate`
+API, not via `eval`/`new Function` in the extension context. (puppeteer-core's
+own ARIA-selector helper uses `new Function` internally on a static, bundled
+string; this is library code shipped inside the package, not remotely loaded.)
 
 ## Data handling
 - No remote server; no analytics; no ad networks.

@@ -7,9 +7,6 @@
  * actual DOM reads/interactions inside the real, logged-in page.
  */
 
-/** How the background drives the page. */
-export type DriveMode = "cdp" | "content";
-
 /** LLM vendor the extension talks to. */
 export type ProviderName =
   | "anthropic" | "openai" | "gemini" | "openrouter" | "deepseek" | "groq" | "ollama" | "custom";
@@ -30,7 +27,6 @@ export type PanelCommand =
       allowedDomains: string[];
       validate: boolean;
       maxSteps: number;
-      mode: DriveMode;
       conversationId: string;
       files?: AttachedFile[];
     }
@@ -74,22 +70,5 @@ export type BackgroundEvent =
   | { kind: "conversations"; list: ConversationInfo[] }
   | { kind: "conversation"; id: string; turns: PersistedTurn[] }
   | { kind: "tabInfo"; message: string }; // e.g. "yeni sekme açıldı"
-
-/** Background → content: one DOM operation to perform in the page. */
-export type ContentRequest =
-  | { op: "evaluate"; fn: string; arg?: unknown }
-  | { op: "click"; selector: string }
-  | { op: "fill"; selector: string; value: string }
-  | { op: "selectOption"; selector: string; value: string }
-  | { op: "setChecked"; selector: string; checked: boolean }
-  | { op: "hover"; selector: string }
-  | { op: "press"; key: string }
-  | { op: "scrollBy"; amount: number }
-  | { op: "currentUrl" };
-
-/** Content → background: result of a DOM operation. */
-export type ContentResult =
-  | { ok: true; value: unknown }
-  | { ok: false; error: string };
 
 export const PANEL_PORT = "ba-side-panel";

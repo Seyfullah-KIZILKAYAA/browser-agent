@@ -51,13 +51,10 @@ await esbuild.build({
   outdir,
 });
 
-// Content script and side panel: IIFE (classic scripts, no ESM imports at runtime).
+// Side panel: IIFE (classic script, no ESM imports at runtime).
 await esbuild.build({
   ...common,
-  entryPoints: {
-    content: "src/content/content.ts",
-    sidepanel: "src/sidepanel/sidepanel.ts",
-  },
+  entryPoints: { sidepanel: "src/sidepanel/sidepanel.ts" },
   format: "iife",
   outdir,
 });

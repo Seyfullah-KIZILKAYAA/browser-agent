@@ -217,7 +217,6 @@ function submitTask(): void {
     allowedDomains: domains,
     validate: $<HTMLInputElement>("validate").checked,
     maxSteps,
-    mode: $<HTMLSelectElement>("mode").value === "content" ? "content" : "cdp",
     conversationId,
     files: attachedFiles.length ? attachedFiles : undefined,
   });

@@ -15,7 +15,6 @@ import {
 } from "@ba/core/browser";
 import type { BackgroundEvent, PanelCommand, ProviderName } from "../shared/protocol";
 import { PANEL_PORT } from "../shared/protocol";
-import { ExtensionSession } from "./extension-session";
 import { CdpExtensionSession } from "./cdp-session";
 import { HistoryStore } from "./history-store";
 import type { BrowserSession } from "@ba/core/browser";
@@ -123,21 +122,18 @@ async function startRun(
   const state: RunState = { cancelled: false };
   current = state;
 
-  // CDP mode drives via chrome.debugger (real OS mouse/coordinate input);
-  // content mode uses DOM events. CDP falls back to content on attach failure.
+  // Drive the tab via CDP (chrome.debugger): real mouse/keyboard input and
+  // page.evaluate through Chrome's own engine — no eval/new Function in the
+  // extension context, so the store's "remote code" answer is a clean "no".
   let session: BrowserSession;
-  let usedMode = cmd.mode;
-  if (cmd.mode === "cdp") {
-    try {
-      session = await CdpExtensionSession.attach(tab.id);
-      post({ kind: "log", message: "CDP moduna bağlanıldı (gerçek mouse/klavye). 'Debugging' çubuğu normaldir." });
-    } catch (err) {
-      usedMode = "content";
-      session = new ExtensionSession(tab.id);
-      post({ kind: "log", message: `CDP bağlanamadı (${err instanceof Error ? err.message : err}); content-script moduna düşüldü.` });
-    }
-  } else {
-    session = new ExtensionSession(tab.id);
+  const usedMode = "cdp";
+  try {
+    session = await CdpExtensionSession.attach(tab.id);
+    post({ kind: "log", message: "Bağlanıldı (gerçek mouse/klavye). 'Debugging' çubuğu normaldir." });
+  } catch (err) {
+    post({ kind: "error", message: `Sekmeye bağlanılamadı: ${err instanceof Error ? err.message : String(err)}` });
+    current = null;
+    return;
   }
 
   const budget = new BudgetGuard(500_000);

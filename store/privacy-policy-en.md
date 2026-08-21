@@ -48,7 +48,7 @@ us, or sold. No ad networks or third-party analytics services are used.
 
 - **debugger:** To control the browser tab with real mouse/keyboard input via the
   Chrome DevTools Protocol. Used only when you start a task, only on the active tab.
-- **tabs, activeTab, scripting:** To read and interact with the page to run a task.
+- **tabs, activeTab:** To read and interact with the page, and switch tabs, to run a task.
 - **storage:** To store your API key, settings, and chat history locally.
 - **sidePanel:** To show the extension UI in the side panel.
 - **host_permissions (`<all_urls>`):** So it can work on whichever site you give a

@@ -50,8 +50,8 @@ taraf analiz servisleri kullanılmaz.
 - **debugger:** Tarayıcı sekmesini gerçek mouse/klavye girişiyle kontrol etmek
   (Chrome DevTools Protocol) için. Yalnızca siz bir görev başlattığınızda,
   yalnızca aktif sekmede kullanılır.
-- **tabs, activeTab, scripting:** Görevi yürütmek için sayfayı okumak ve
-  etkileşim kurmak.
+- **tabs, activeTab:** Görevi yürütmek için sayfayı okumak, etkileşim kurmak ve
+  sekmeler arası geçmek.
 - **storage:** API anahtarınızı, ayarlarınızı ve sohbet geçmişinizi yerel olarak
   saklamak.
 - **sidePanel:** Uzantı arayüzünü yan panelde göstermek.
