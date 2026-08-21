@@ -7,5 +7,6 @@ tests/regression/.work/
 .ba-profiles/
 _preview.mjs
 _shots.mjs
+_ppcheck.mjs
 *.zip
 .env

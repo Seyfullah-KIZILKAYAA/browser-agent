@@ -29,10 +29,11 @@ This information is sent **directly to the AI provider you chose** in order to
 complete your task. How the provider handles this data is governed by that
 provider's own privacy policy.
 
-### 3. Chat history
-The tasks you give and their results are stored in your browser's local storage
-so you can revisit them in the extension. This history stays **only on your
-device** and you can delete it from within the extension at any time.
+### 3. Chat history and settings
+The tasks you give and their results, your provider settings, and your interface
+language preference are stored in your browser's local storage so you can revisit
+them in the extension. This data stays **only on your device** and you can delete
+your chat history from within the extension at any time.
 
 ### 4. Files you upload
 If you attach a file, its content is sent to the AI provider to complete your

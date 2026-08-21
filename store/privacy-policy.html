@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Browser Agent — Privacy Policy</title>
+  <style>
+    :root { --fg:#1a1a1a; --muted:#6b7280; --border:#e5e7eb; --primary:#2563eb; --bg:#fff; --card:#f9fafb; }
+    @media (prefers-color-scheme: dark) {
+      :root { --fg:#e5e7eb; --muted:#9ca3af; --border:#333; --primary:#3b82f6; --bg:#161616; --card:#1e1e1e; }
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.65 system-ui,-apple-system,sans-serif; }
+    .wrap { max-width:760px; margin:0 auto; padding:40px 22px 80px; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:28px; }
+    h1 { font-size:30px; margin:0 0 4px; }
+    .updated { color:var(--muted); font-size:14px; }
+    .langbtns { display:flex; gap:6px; }
+    .langbtns button {
+      border:1px solid var(--border); background:var(--card); color:var(--fg); cursor:pointer;
+      padding:6px 14px; border-radius:999px; font:inherit; font-size:14px;
+    }
+    .langbtns button.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+    h2 { font-size:20px; margin:32px 0 8px; }
+    h3 { font-size:16px; margin:20px 0 4px; }
+    p, li { color:var(--fg); }
+    .summary { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin:16px 0; }
+    code { background:var(--card); border:1px solid var(--border); border-radius:5px; padding:1px 5px; font-size:14px; }
+    a { color:var(--primary); }
+    .lang { display:none; }
+    .lang.active { display:block; }
+    footer { margin-top:40px; color:var(--muted); font-size:14px; border-top:1px solid var(--border); padding-top:16px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Browser Agent</h1>
+      <div class="updated" id="updated">Privacy Policy · Last updated: August 21, 2026</div>
+    </div>
+    <div class="langbtns">
+      <button id="btn-en" class="active" onclick="setLang('en')">English</button>
+      <button id="btn-tr" onclick="setLang('tr')">Türkçe</button>
+    </div>
+  </header>
+
+  <!-- ENGLISH -->
+  <section class="lang active" id="en">
+    <p>Browser Agent (“the extension”) is an AI tool that automates tasks in your
+    browser on your behalf. We care about your privacy. This policy explains what
+    data the extension processes and how it is used.</p>
+
+    <div class="summary">
+      <strong>Summary</strong>
+      <ul>
+        <li>The extension has <strong>no server of its own.</strong> Your data is not sent to us and not stored by us. Everything runs locally in your browser.</li>
+        <li>Your API key is stored <strong>locally in your browser only</strong>.</li>
+        <li>Page content is sent <strong>only to the AI provider you choose</strong> (e.g. Anthropic, OpenAI, Google) to carry out a task.</li>
+      </ul>
+    </div>
+
+    <h2>Data processed</h2>
+    <h3>1. Your API key</h3>
+    <p>To use the extension, you enter an API key for the AI provider you select. This key is stored in your browser’s local storage (<code>chrome.storage.local</code>) and is used <strong>only</strong> to send requests to that provider’s API. Your key is not transmitted anywhere else.</p>
+    <h3>2. Page content and task text</h3>
+    <p>When you give a task, the extension reads the interactive elements (buttons, links, form fields) and, when needed, text content of the currently open page. This information is sent <strong>directly to the AI provider you chose</strong> to complete your task. How the provider handles this data is governed by that provider’s own privacy policy.</p>
+    <h3>3. Chat history and settings</h3>
+    <p>The tasks you give and their results, your provider settings, and your interface language preference are stored in your browser’s local storage so you can revisit them. This data stays <strong>only on your device</strong> and you can delete your chat history from within the extension at any time.</p>
+    <h3>4. Files you upload</h3>
+    <p>If you attach a file, its content is sent to the AI provider to complete your task. Files are not uploaded to any server.</p>
+
+    <h2>Data sharing</h2>
+    <p>The extension shares your data <strong>only with the AI provider you configure.</strong> As the developer, we cannot access your data; nothing is sent to us, collected by us, or sold. No ad networks or third-party analytics services are used.</p>
+
+    <h2>Permissions and why they are needed</h2>
+    <ul>
+      <li><strong>debugger:</strong> To control the browser tab with real mouse/keyboard input via the Chrome DevTools Protocol. Used only when you start a task, only on the active tab.</li>
+      <li><strong>tabs, activeTab:</strong> To read and interact with the page, and switch tabs, to run a task.</li>
+      <li><strong>storage:</strong> To store your API key, settings, and chat history locally.</li>
+      <li><strong>sidePanel:</strong> To show the extension UI in the side panel.</li>
+      <li><strong>host_permissions (<code>&lt;all_urls&gt;</code>):</strong> So it can work on whichever site you give a task on. The extension is active only when you start a task.</li>
+    </ul>
+
+    <h2>Children’s privacy</h2>
+    <p>The extension is not directed to children under 13 and does not knowingly collect data from them.</p>
+
+    <h2>Changes</h2>
+    <p>If we change this policy, we will publish the updated version on this page.</p>
+
+    <h2>Contact</h2>
+    <p>Questions: <a href="mailto:info.muhammedkizilkaya@gmail.com">info.muhammedkizilkaya@gmail.com</a></p>
+  </section>
+
+  <!-- TÜRKÇE -->
+  <section class="lang" id="tr">
+    <p>Browser Agent (“uzantı”), tarayıcınızda görevleri sizin adınıza otomatikleştiren bir yapay zeka aracıdır. Gizliliğinize önem veriyoruz. Bu politika, uzantının hangi verileri işlediğini ve nasıl kullandığını açıklar.</p>
+
+    <div class="summary">
+      <strong>Kısa özet</strong>
+      <ul>
+        <li>Uzantının <strong>kendi sunucusu yoktur.</strong> Verileriniz bize gönderilmez, bizde saklanmaz. Uzantı tamamen sizin tarayıcınızda çalışır.</li>
+        <li>API anahtarınız yalnızca <strong>sizin tarayıcınızda yerel olarak</strong> saklanır.</li>
+        <li>Sayfa içeriği yalnızca <strong>sizin seçtiğiniz yapay zeka sağlayıcısına</strong> (örn. Anthropic, OpenAI, Google) bir görevi yerine getirmek için gönderilir.</li>
+      </ul>
+    </div>
+
+    <h2>İşlenen veriler</h2>
+    <h3>1. API anahtarınız</h3>
+    <p>Uzantıyı kullanmak için seçtiğiniz yapay zeka sağlayıcısının API anahtarını girersiniz. Bu anahtar tarayıcınızın yerel deposunda (<code>chrome.storage.local</code>) saklanır ve <strong>yalnızca</strong> ilgili sağlayıcının API’sine istek gönderirken kullanılır. Anahtarınız başka hiçbir yere iletilmez.</p>
+    <h3>2. Sayfa içeriği ve görev metni</h3>
+    <p>Bir görev verdiğinizde, uzantı o an açık olan sayfanın etkileşimli öğelerini (butonlar, bağlantılar, form alanları) ve gerektiğinde metin içeriğini okur. Bu bilgi, görevinizi tamamlaması için <strong>doğrudan sizin seçtiğiniz yapay zeka sağlayıcısına</strong> gönderilir. Sağlayıcının bu veriyi nasıl işlediği, o sağlayıcının kendi gizlilik politikasına tabidir.</p>
+    <h3>3. Sohbet geçmişi ve ayarlar</h3>
+    <p>Verdiğiniz görevler ve sonuçları, sağlayıcı ayarlarınız ve arayüz dili tercihiniz uzantı içinde erişebilmeniz için tarayıcınızın yerel deposunda saklanır. Bu veriler <strong>yalnızca sizin cihazınızdadır</strong> ve sohbet geçmişini istediğiniz zaman uzantı içinden silebilirsiniz.</p>
+    <h3>4. Yüklediğiniz dosyalar</h3>
+    <p>Bir dosya eklerseniz, içeriği görevinizi yerine getirmek için yapay zeka sağlayıcısına gönderilir. Dosyalar bir sunucuya yüklenmez.</p>
+
+    <h2>Verilerin paylaşımı</h2>
+    <p>Uzantı verilerinizi <strong>yalnızca sizin yapılandırdığınız yapay zeka sağlayıcısıyla</strong> paylaşır. Uzantı geliştiricisi olarak biz verilerinize erişemeyiz; hiçbir veri bize gönderilmez, tarafımızca toplanmaz veya satılmaz. Reklam ağları veya üçüncü taraf analiz servisleri kullanılmaz.</p>
+
+    <h2>Kullanılan izinler ve gerekçeleri</h2>
+    <ul>
+      <li><strong>debugger:</strong> Tarayıcı sekmesini gerçek fare/klavye girişiyle (Chrome DevTools Protocol) kontrol etmek için. Yalnızca siz bir görev başlattığınızda, yalnızca aktif sekmede kullanılır.</li>
+      <li><strong>tabs, activeTab:</strong> Görevi yürütmek için sayfayı okumak, etkileşim kurmak ve sekmeler arası geçmek.</li>
+      <li><strong>storage:</strong> API anahtarınızı, ayarlarınızı ve sohbet geçmişinizi yerel olarak saklamak.</li>
+      <li><strong>sidePanel:</strong> Uzantı arayüzünü yan panelde göstermek.</li>
+      <li><strong>host_permissions (<code>&lt;all_urls&gt;</code>):</strong> Görevi hangi sitede verirseniz orada çalışabilmek. Uzantı yalnızca siz bir görev başlattığınızda etkin olur.</li>
+    </ul>
+
+    <h2>Çocukların gizliliği</h2>
+    <p>Uzantı 13 yaş altı çocuklara yönelik değildir ve bilerek onlardan veri toplamaz.</p>
+
+    <h2>Değişiklikler</h2>
+    <p>Bu politikada değişiklik yaparsak, güncellenmiş sürümü bu sayfada yayımlarız.</p>
+
+    <h2>İletişim</h2>
+    <p>Sorularınız için: <a href="mailto:info.muhammedkizilkaya@gmail.com">info.muhammedkizilkaya@gmail.com</a></p>
+  </section>
+
+  <footer>© 2026 Browser Agent · info.muhammedkizilkaya@gmail.com</footer>
+</div>
+
+<script>
+  function setLang(l) {
+    document.getElementById('en').classList.toggle('active', l === 'en');
+    document.getElementById('tr').classList.toggle('active', l === 'tr');
+    document.getElementById('btn-en').classList.toggle('active', l === 'en');
+    document.getElementById('btn-tr').classList.toggle('active', l === 'tr');
+    document.documentElement.lang = l;
+    document.getElementById('updated').textContent =
+      l === 'tr' ? 'Gizlilik Politikası · Son güncelleme: 21 Ağustos 2026'
+                 : 'Privacy Policy · Last updated: August 21, 2026';
+  }
+  // Default to browser language if Turkish.
+  if ((navigator.language || '').toLowerCase().startsWith('tr')) setLang('tr');
+</script>
+</body>
+</html>

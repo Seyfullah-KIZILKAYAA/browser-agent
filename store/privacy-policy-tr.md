@@ -29,10 +29,11 @@ Bu bilgi, görevinizi tamamlaması için **doğrudan sizin seçtiğiniz yapay ze
 sağlayıcısına** gönderilir. Sağlayıcının bu veriyi nasıl işlediği, o sağlayıcının
 kendi gizlilik politikasına tabidir.
 
-### 3. Sohbet geçmişi
-Verdiğiniz görevler ve sonuçları, uzantı içinde geçmişe erişebilmeniz için
-tarayıcınızın yerel deposunda saklanır. Bu geçmiş **yalnızca sizin
-cihazınızdadır** ve istediğiniz zaman uzantı içinden silebilirsiniz.
+### 3. Sohbet geçmişi ve ayarlar
+Verdiğiniz görevler ve sonuçları, sağlayıcı ayarlarınız ve arayüz dili tercihiniz
+uzantı içinde erişebilmeniz için tarayıcınızın yerel deposunda saklanır. Bu veriler
+**yalnızca sizin cihazınızdadır** ve sohbet geçmişini istediğiniz zaman uzantı
+içinden silebilirsiniz.
 
 ### 4. Yüklediğiniz dosyalar
 Bir dosya eklerseniz, içeriği görevinizi yerine getirmek için yapay zeka
